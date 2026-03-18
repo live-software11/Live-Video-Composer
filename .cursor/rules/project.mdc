@@ -8,6 +8,7 @@ alwaysApply: true
 
 ## Regole per contesto
 - **project.mdc** (questo): sempre attivo
+- **doc-sync.mdc**: sempre attivo (sync documentazione a ogni modifica significativa)
 - **git-autonomy.mdc**: sempre attivo (commit/push)
 - **build.mdc**: quando si modificano *.spec, installer.iss, *.bat, build_exe.py
 - **main-py.mdc**: quando si modifica main.py
@@ -35,14 +36,14 @@ Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita i
 ## Stack Tecnologico
 - Python 3.8+ (testato con 3.13)
 - Pillow >=10.0.0
-- opencv-python >=4.8.0 (opzionale)
+- opencv-python-headless >=4.8.0 (opzionale, ~50MB in meno di opencv-python)
 - numpy >=1.24.0
 - windnd >=1.0.7 (necessario per drag & drop)
 - PyInstaller >=5.0 (build)
 
 ## Struttura
 - `main.py` - Sorgente unico (~2340 righe)
-- `docs/` - Performance_Improvements_Live_Video_Composer.md, Setup_Cursor_Git_Live_Video_Composer.md
+- `docs/` - ARCHITETTURA_DEFINITIVA, System_Prompt, Primo_Prompt, Performance_Improvements, Setup_Cursor_Git
 - `release/` - Output build (Portable.exe, Setup.exe)
 - `_clean_and_build.bat` - Build completa (installer+portable+setup). `_build_setup.bat` - Solo setup (richiede dist/Live_Video_Composer/)
 - `icon.ico` - Obbligatorio in root per spec

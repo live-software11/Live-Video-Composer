@@ -42,6 +42,7 @@ Output: `release/Live_Video_Composer_Setup.exe`
 ### Spec Files
 - icon.ico in root (obbligatorio)
 - Hidden imports: PIL, PIL.Image, PIL.ImageTk, cv2, numpy, windnd, windnd.windnd, ctypes, ctypes.wintypes
+- cv2: opencv-python-headless espone cv2 (stessa API di opencv-python)
 - collect_all('windnd') obbligatorio
 - Exclude: matplotlib, scipy, pandas, pytest, setuptools, wheel, pip
 - Optimize: 2, UPX: True, Console: False

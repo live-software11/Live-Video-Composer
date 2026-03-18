@@ -62,24 +62,25 @@ Il file `main.py` contiene tutto il codice sorgente (~2340 righe):
 ### Export in thread separato
 ```python
 def export_something(self):
-    # Validazione nel main thread
     if not self.layers:
         return
-    self.progress.start()
+    self._start_export()  # progress.start() + cancel_btn.pack()
     thread = threading.Thread(target=self._do_export_something, args=(...,), daemon=True)
     thread.start()
 
 def _do_export_something(self, ...):
     try:
-        # Snapshot variabili (thread-safe)
         output_w = self.output_width.get()
         # ... lavoro pesante ...
+        if self._export_cancelled.is_set():
+            self.root.after(0, self._stop_export)
+            return
         logger.info("Export completato")
-        self.root.after(0, lambda: self.progress.stop())
+        self.root.after(0, self._stop_export)
         self.root.after(0, lambda: messagebox.showinfo("Successo", "..."))
     except Exception as ex:
         logger.error(f"Errore: {ex}")
-        self.root.after(0, lambda: self.progress.stop())
+        self.root.after(0, self._stop_export)
         self.root.after(0, lambda err=str(ex): messagebox.showerror("Errore", err))
 ```
 

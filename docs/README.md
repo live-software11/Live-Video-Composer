@@ -14,5 +14,8 @@
 
 | File | Contenuto |
 |------|-----------|
+| `ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md` | Documento unico di riferimento (stack, data model, vincoli, flussi) |
+| `System_Prompt_Claude_Live_Video_Composer.md` | Prompt Claude Desktop (architetto, formato task) |
+| `Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md` | Prompt avvio chat Claude Desktop |
 | `Performance_Improvements_Live_Video_Composer.md` | Analisi colli di bottiglia e ottimizzazioni |
 | `Setup_Cursor_Git_Live_Video_Composer.md` | Setup Cursor per git autonomo |

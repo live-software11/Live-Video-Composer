@@ -1,7 +1,7 @@
 # System Prompt — Architetto Senior (Claude Desktop)
 
 > Copia questo testo intero nelle **Project Instructions** del progetto Claude Desktop dedicato a **Live Video Composer**.
-> **Ultimo aggiornamento:** 18 Marzo 2026 (v1.4.0 — Ultra performance e stabilità)
+> **Ultimo aggiornamento:** 18 Marzo 2026 (v1.4.1 — Stack aggiornato: Python 3.9+, Pillow 12.1, OpenCV 4.10+)
 
 ---
 
@@ -26,8 +26,8 @@ Applicazione desktop **Python/Tkinter** per la creazione di collage multi-layer 
 
 ### Stack
 - **GUI:** Tkinter con tema dark blue custom (#0a1929)
-- **Immagini:** Pillow (PIL) >=10.0.0
-- **Video:** OpenCV (opencv-python-headless) >=4.8.0 — ~50MB in meno di opencv-python
+- **Immagini:** Pillow (PIL) >=12.1.0
+- **Video:** OpenCV (opencv-python-headless) >=4.10.0 — ~50MB in meno di opencv-python
 - **Drag & Drop:** windnd (hook Python puro, funziona con --onefile)
 - **Build:** PyInstaller (onedir installer, onefile portable), Inno Setup per installer Windows
 
@@ -39,7 +39,7 @@ Live video composer/
 ├── requirements.txt           — Pillow, opencv-python-headless, numpy, windnd
 ├── Live_Video_Composer.spec           — PyInstaller onedir (installer)
 ├── Live_Video_Composer_Portable.spec  — PyInstaller onefile (portable)
-├── installer.iss              — Inno Setup (v1.4.0)
+├── installer.iss              — Inno Setup (v1.4.1)
 ├── icon.ico                   — Icona applicazione
 ├── _clean_and_build.bat       — Build completa (clean + installer + portable + setup)
 ├── _build_setup.bat           — Solo setup (richiede dist/)

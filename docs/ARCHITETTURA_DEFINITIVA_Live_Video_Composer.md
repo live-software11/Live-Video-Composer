@@ -1,6 +1,6 @@
 # Live Video Composer — Documentazione Definitiva
 
-> **Versione:** 1.4.0 — 18/03/2026
+> **Versione:** 1.4.1 — 18/03/2026
 > **Scopo:** Documento unico di riferimento per sviluppo, manutenzione e preparazione alla vendita
 
 ---
@@ -68,13 +68,13 @@
 
 | Tecnologia | Versione | Ruolo |
 |---|---|---|
-| **Python** | 3.8+ (testato 3.13) | Runtime |
+| **Python** | 3.9+ (testato 3.13) | Runtime |
 | **Tkinter** | stdlib | GUI |
-| **Pillow (PIL)** | >=10.0.0 | Elaborazione immagini |
-| **OpenCV** | opencv-python-headless >=4.8.0 | Elaborazione video |
-| **numpy** | >=1.24.0 | Array per video |
+| **Pillow (PIL)** | >=12.1.0 | Elaborazione immagini |
+| **OpenCV** | opencv-python-headless >=4.10.0 | Elaborazione video |
+| **numpy** | >=1.26.0 | Array per video |
 | **windnd** | >=1.0.7 | Drag & drop nativo Windows |
-| **PyInstaller** | >=5.0 | Build eseguibile |
+| **PyInstaller** | >=6.0 | Build eseguibile |
 | **Inno Setup** | 6 | Installer Windows |
 
 ### Linguaggi e LOC
@@ -91,11 +91,11 @@
 
 | Pacchetto | Versione | Funzione |
 |---|---|---|
-| Pillow | >=10.0.0 | Immagini, resize, composite |
-| opencv-python-headless | >=4.8.0 | Video capture, export MP4/GIF |
-| numpy | >=1.24.0 | Array per cv2 |
+| Pillow | >=12.1.0 | Immagini, resize, composite |
+| opencv-python-headless | >=4.10.0 | Video capture, export MP4/GIF |
+| numpy | >=1.26.0 | Array per cv2 |
 | windnd | >=1.0.7 | Drag & drop (hook Python) |
-| tkinterdnd2 | >=0.4.0 | Fallback D&D (opzionale) |
+| tkinterdnd2 | >=0.4.3 | Fallback D&D (opzionale) |
 
 **Nota:** `opencv-python-headless` espone `cv2` con la stessa API di `opencv-python`, ma ~50MB in meno e nessuna dipendenza Qt.
 
@@ -109,7 +109,7 @@ Live video composer/
 ├── requirements.txt
 ├── Live_Video_Composer.spec           — PyInstaller onedir (installer)
 ├── Live_Video_Composer_Portable.spec  — PyInstaller onefile (portable)
-├── installer.iss              — Inno Setup (v1.4.0)
+├── installer.iss              — Inno Setup (v1.4.1)
 ├── icon.ico                   — Icona applicazione
 ├── icons/                     — Icona sorgente (per scripts/create-icon.py)
 ├── scripts/
@@ -370,6 +370,10 @@ Vedi `docs/Performance_Improvements_Live_Video_Composer.md` per analisi dettagli
 ---
 
 ## 14. CHANGELOG
+
+### v1.4.1 (2026-03-18)
+- **Stack aggiornato** — Python 3.9+ (Pillow 12 richiede), Pillow >=12.1.0 (CVE-2026-25990), opencv-python-headless >=4.10.0, numpy >=1.26.0, tkinterdnd2 >=0.4.3, PyInstaller >=6.0
+- **Documentazione** — README, ARCHITETTURA, System_Prompt, Cursor rules allineate
 
 ### v1.4.0 (2026-03-18)
 - Rename LiveVideoComposer, log LiveVideoComposer/

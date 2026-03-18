@@ -3,7 +3,7 @@
 ; Richiede Inno Setup: https://jrsoftware.org/isinfo.php
 
 #define MyAppName "Live Video Composer"
-#define MyAppVersion "1.4.0"
+#define MyAppVersion "1.4.1"
 #define MyAppPublisher "Live Software"
 #define MyAppURL "https://github.com/live-software11"
 #define MyAppExeName "Live_Video_Composer.exe"

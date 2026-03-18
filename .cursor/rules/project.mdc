@@ -31,15 +31,15 @@ Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita i
 - Drag & Drop: windnd (hook su finestra root)
 - Build: PyInstaller (onedir per installer, onefile per portable)
 - Installer: Inno Setup
-- Versione: 1.4.0
+- Versione: 1.4.1
 
 ## Stack Tecnologico
-- Python 3.8+ (testato con 3.13)
-- Pillow >=10.0.0
-- opencv-python-headless >=4.8.0 (opzionale, ~50MB in meno di opencv-python)
-- numpy >=1.24.0
+- Python 3.9+ (testato con 3.13)
+- Pillow >=12.1.0
+- opencv-python-headless >=4.10.0 (opzionale, ~50MB in meno di opencv-python)
+- numpy >=1.26.0
 - windnd >=1.0.7 (necessario per drag & drop)
-- PyInstaller >=5.0 (build)
+- PyInstaller >=6.0 (build)
 
 ## Struttura
 - `main.py` - Sorgente unico (~2340 righe)

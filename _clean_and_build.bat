@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   Live Video Composer v1.4.0 - Clean + Build
+echo   Live Video Composer v1.4.1 - Clean + Build
 echo ============================================
 echo.
 

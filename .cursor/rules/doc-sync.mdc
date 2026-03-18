@@ -7,6 +7,8 @@ alwaysApply: true
 
 **Ogni modifica significativa al codice o all'architettura richiede l'aggiornamento di:**
 
+*Stack corrente (v1.4.1):* Python 3.9+, Pillow >=12.1.0, opencv-python-headless >=4.10.0, numpy >=1.26.0, PyInstaller >=6.0
+
 1. **`docs/ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md`**
    - Nuove funzioni/metodi → sezione Mappa File e Funzioni
    - Cambi data model (ImageLayer, LiveVideoComposer) → sezione Data Model

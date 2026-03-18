@@ -1160,7 +1160,7 @@ class LiveVideoComposer:
     def load_video(self, filepath):
         """Carica un video - salva il percorso e usa il primo frame come anteprima"""
         if not VIDEO_SUPPORT:
-            messagebox.showerror("Errore", "OpenCV non installato. Installa con: pip install opencv-python")
+            messagebox.showerror("Errore", "OpenCV non installato. Installa con: pip install opencv-python-headless")
             return
 
         cap = None
@@ -2141,7 +2141,7 @@ class LiveVideoComposer:
     def export_video(self):
         """Esporta come video"""
         if not VIDEO_SUPPORT:
-            messagebox.showerror("Errore", "OpenCV non installato. Installa con: pip install opencv-python")
+            messagebox.showerror("Errore", "OpenCV non installato. Installa con: pip install opencv-python-headless")
             return
 
         # Trova video nei layer

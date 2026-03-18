@@ -75,6 +75,6 @@ Dopo ogni build, verificare:
 7. Nessun file extra viene creato nella cartella dell'exe
 
 ### Versioning
-- Versione corrente: 1.4.0
+- Versione corrente: 1.4.1
 - Aggiornare in `installer.iss` (#define MyAppVersion)
 - Formato: MAJOR.MINOR.PATCH (semver)

@@ -1,5 +1,6 @@
 # Documentazione Live Video Composer
 
+> **v1.4.1** | Python 3.9+ | Pillow >=12.1.0 | opencv-python-headless >=4.10.0
 > Naming: tutti i documenti usano il suffisso `_Live_Video_Composer` per coerenza con Live PLAN e Live CREW.
 
 ## Struttura output build

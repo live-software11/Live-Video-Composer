@@ -2,7 +2,7 @@
 
 **Convertitore di Immagini e Video con supporto Multi-Layer Collage**
 
-> Versione 1.4.0 | Python 3.8+ | Windows 10/11
+> Versione 1.4.1 | Python 3.9+ | Windows 10/11
 
 ---
 
@@ -72,11 +72,11 @@
 
 | Libreria | Versione | Scopo |
 |----------|----------|-------|
-| Pillow | >=10.0.0 | Elaborazione immagini |
-| opencv-python | >=4.8.0 | Elaborazione video (opzionale) |
-| numpy | >=1.24.0 | Array processing per video |
+| Pillow | >=12.1.0 | Elaborazione immagini |
+| opencv-python-headless | >=4.10.0 | Elaborazione video (opzionale) |
+| numpy | >=1.26.0 | Array processing per video |
 | windnd | >=1.0.7 | Drag & drop nativo Windows |
-| pyinstaller | >=5.0 | Build eseguibile (dev) |
+| pyinstaller | >=6.0 | Build eseguibile (dev) |
 
 ---
 
@@ -84,7 +84,7 @@
 
 ### Requisiti Sistema
 - **OS**: Windows 10/11
-- **Python**: 3.8 o superiore (testato con 3.13)
+- **Python**: 3.9 o superiore (testato con 3.13)
 - **RAM**: 4GB minimo, 8GB consigliato per video
 - **Disco**: ~100MB per installazione completa
 
@@ -195,7 +195,7 @@ Live video composer/
 ├── icon.ico                   # Icona applicazione
 ├── Live_Video_Composer.spec           # PyInstaller spec (installer, onedir)
 ├── Live_Video_Composer_Portable.spec  # PyInstaller spec (portable, onefile)
-├── installer.iss              # Inno Setup script (v1.4.0)
+├── installer.iss              # Inno Setup script (v1.4.1)
 ├── clean-and-build.bat        # Entry point build (output in release/)
 ├── _clean_and_build.bat       # Build completa (clean + installer + portable)
 ├── _build_setup.bat           # Solo generazione setup (richiede dist/)
@@ -368,7 +368,7 @@ python build_exe.py
 
 | Errore | Causa | Soluzione |
 |--------|-------|-----------|
-| "OpenCV non installato" | cv2 mancante | `pip install opencv-python` |
+| "OpenCV non installato" | cv2 mancante | `pip install opencv-python-headless` |
 | Video non si carica | Codec mancante | Installa K-Lite Codec Pack |
 | Export lento | File/risoluzione grande | Usa preset qualita inferiore |
 | Crash su immagini grandi | RAM insufficiente | Riduci risoluzione sorgente |
@@ -419,6 +419,10 @@ python -c "from PIL import Image; import cv2; import numpy; import windnd; print
 ---
 
 ## Changelog
+
+### v1.4.1 (2026-03-18)
+- **Stack aggiornato** — Python 3.9+, Pillow >=12.1.0 (fix CVE-2026-25990), opencv-python-headless >=4.10.0, numpy >=1.26.0, tkinterdnd2 >=0.4.3, PyInstaller >=6.0
+- **Documentazione** — README, ARCHITETTURA, System_Prompt, Cursor rules allineate
 
 ### v1.4.0 (2026-03-18)
 - **Rename completo** - Classe `LiveVideoComposer` (ex `RConverter`), log in `%LOCALAPPDATA%\LiveVideoComposer\live_video_composer.log`

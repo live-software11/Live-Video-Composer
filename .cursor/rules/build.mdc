@@ -1,0 +1,79 @@
+---
+description: Regole per build e distribuzione Live Video Composer
+globs: "*.spec,build_exe.py,installer.iss,*.bat"
+alwaysApply: false
+---
+
+# Live Video Composer - Regole Build
+
+## Comandi Build
+
+IMPORTANTE: usare sempre `python -m PyInstaller` (non `pyinstaller` diretto, che potrebbe non essere nel PATH su installazioni utente).
+
+### Build rapida (doppio click)
+`clean-and-build.bat` (o `_clean_and_build.bat`): pulisce, builda installer (onedir), portable (onefile), setup Inno (se ISCC nel PATH). Output in `release/`.
+`_build_setup.bat`: solo generazione setup. PREREQUISITO: eseguire prima build installer (dist/Live_Video_Composer/ deve esistere).
+
+### Versione Installer (per Inno Setup)
+```bash
+python -m PyInstaller Live_Video_Composer.spec --noconfirm --clean
+```
+Output: `dist/Live_Video_Composer/Live_Video_Composer.exe` (cartella con tutte le DLL)
+
+### Versione Portable (singolo .exe)
+```bash
+python -m PyInstaller Live_Video_Composer_Portable.spec --noconfirm --clean
+```
+Output: `dist/Live_Video_Composer_Portable.exe` (singolo file eseguibile)
+
+### Installer Windows
+Compilare `installer.iss` con Inno Setup Compiler (Ctrl+F9) dopo la build della versione installer.
+Output: `release/Live_Video_Composer_Setup.exe`
+
+## Regole CRITICHE
+
+### Drag & Drop (portable funzionante)
+- windnd (hook Python) - funziona con --onefile perche' Python puro (no DLL native)
+- MAI subclassing WNDPROC Win32: crasha Tkinter
+- collect_all('windnd') OBBLIGATORIO in entrambi i spec
+- Setup ritardato 500ms (root.after) - dare tempo alla finestra
+- Hidden imports: windnd, windnd.windnd, ctypes, ctypes.wintypes
+
+### Spec Files
+- icon.ico in root (obbligatorio)
+- Hidden imports: PIL, PIL.Image, PIL.ImageTk, cv2, numpy, windnd, windnd.windnd, ctypes, ctypes.wintypes
+- collect_all('windnd') obbligatorio
+- Exclude: matplotlib, scipy, pandas, pytest, setuptools, wheel, pip
+- Optimize: 2, UPX: True, Console: False
+
+### Setup per altro PC
+Il file `release/Live_Video_Composer_Setup.exe` e' un installer Windows completo e autonomo:
+- Copia il file sul nuovo PC (chiavetta, cloud, rete)
+- Esegui con doppio click
+- Segui la procedura guidata: nessun Python o dipendenza da installare
+- Crea menu Start, disinstallazione, icona desktop (opzionale)
+
+### Differenze tra versioni
+| Aspetto | Setup (installer) | Portable |
+|---------|-------------------|----------|
+| File | Live_Video_Composer_Setup.exe | Live_Video_Composer_Portable.exe |
+| Uso su altro PC | Copia setup, esegui, installa | Copia exe, esegui (nessuna installazione) |
+| Menu Start | Si | No |
+| Disinstallazione | Si (Pannello di controllo) | No (elimina la cartella) |
+| Drag & Drop | windnd | windnd |
+| Velocita avvio | Immediata | ~3-5 secondi (estrazione temp) |
+
+### Test Post-Build
+Dopo ogni build, verificare:
+1. L'applicazione si avvia senza errori
+2. Il drag & drop di immagini funziona
+3. Il drag & drop di video funziona (se OpenCV incluso)
+4. L'export immagine funziona (JPG, PNG, WebP)
+5. L'export video funziona (MP4, GIF)
+6. Il file log viene creato in %LOCALAPPDATA%\LiveVideoComposer\ (NON nella cartella dell'exe)
+7. Nessun file extra viene creato nella cartella dell'exe
+
+### Versioning
+- Versione corrente: 1.4.0
+- Aggiornare in `installer.iss` (#define MyAppVersion)
+- Formato: MAJOR.MINOR.PATCH (semver)

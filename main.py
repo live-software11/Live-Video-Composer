@@ -1101,8 +1101,8 @@ class LiveVideoComposer:
                 return
 
             # Calcola zoom per far stare l'immagine nel canvas
-            output_w = self.output_width.get()
-            output_h = self.output_height.get()
+            output_w = max(1, self.output_width.get())
+            output_h = max(1, self.output_height.get())
 
             # Downscale working copy: se l'immagine e' piu grande di 2x l'output,
             # crea una copia ridotta per la preview. L'export ricarica da disco.
@@ -1110,7 +1110,7 @@ class LiveVideoComposer:
             max_working_h = output_h * 2
             original_path = None
             if img_w > max_working_w or img_h > max_working_h:
-                ds_scale = min(max_working_w / img_w, max_working_h / img_h)
+                ds_scale = min(max_working_w / max(1, img_w), max_working_h / max(1, img_h))
                 new_w = max(1, int(img_w * ds_scale))
                 new_h = max(1, int(img_h * ds_scale))
                 img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
@@ -1122,8 +1122,10 @@ class LiveVideoComposer:
             layer._original_path = original_path
 
             # Calcola la scala per contenere l'immagine nell'output
-            scale_x = output_w / img_w
-            scale_y = output_h / img_h
+            output_w = max(1, self.output_width.get())
+            output_h = max(1, self.output_height.get())
+            scale_x = output_w / max(1, img_w)
+            scale_y = output_h / max(1, img_h)
             fit_scale = min(scale_x, scale_y)
 
             # Converti in percentuale zoom (massimo 100% per non ingrandire)
@@ -1198,16 +1200,16 @@ class LiveVideoComposer:
             layer.is_video = True
 
             # Calcola zoom per far stare nel canvas
-            output_w = self.output_width.get()
-            output_h = self.output_height.get()
+            output_w = max(1, self.output_width.get())
+            output_h = max(1, self.output_height.get())
             img_w, img_h = img.size
 
             if img_w == 0 or img_h == 0:
                 logger.warning(f"Video con frame di dimensioni zero: {filepath}")
                 return
 
-            scale_x = output_w / img_w
-            scale_y = output_h / img_h
+            scale_x = output_w / max(1, img_w)
+            scale_y = output_h / max(1, img_h)
             fit_scale = min(scale_x, scale_y)
             fit_zoom = int(fit_scale * 100)
             fit_zoom = min(fit_zoom, 100)

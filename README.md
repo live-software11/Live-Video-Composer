@@ -195,7 +195,7 @@ Live video composer/
 ├── icon.ico                   # Icona applicazione
 ├── Live_Video_Composer.spec           # PyInstaller spec (installer, onedir)
 ├── Live_Video_Composer_Portable.spec  # PyInstaller spec (portable, onefile)
-├── installer.iss              # Inno Setup script (v1.3.1)
+├── installer.iss              # Inno Setup script (v1.4.0)
 ├── clean-and-build.bat        # Entry point build (output in release/)
 ├── _clean_and_build.bat       # Build completa (clean + installer + portable)
 ├── _build_setup.bat           # Solo generazione setup (richiede dist/)
@@ -218,17 +218,17 @@ Live video composer/
 ### Organizzazione main.py
 
 ```
-Righe 1-77:      Import, logging (%LOCALAPPDATA%), costanti, preset risoluzioni
-Righe 80-153:    Classe ImageLayer (data model con __slots__ e cache)
-Righe 156-762:   RConverter.__init__, setup_style, create_widgets (UI 3 colonne)
-Righe 764-846:   Setup drag & drop (windnd + fallback tkinterdnd2)
-Righe 847-952:   Init canvas, preset qualita, size display
-Righe 987-1335:  Gestione layer (add, load, remove, move, duplicate, fit)
-Righe 1336-1445: Trasformazioni (zoom, rotation, position, flip)
-Righe 1447-1593: Rendering canvas (composite, handles, debounce)
-Righe 1595-1866: Mouse handlers, scroll, keyboard, output settings
-Righe 1866-2210: Export image/video (threading, progress, GIF ottimizzata)
-Righe 2212-2226: main() entry point
+Righe 1-77:      Import, logging (%LOCALAPPDATA%\LiveVideoComposer), costanti, preset risoluzioni
+Righe 80-175:    Classe ImageLayer (data model con __slots__, cache, _original_path)
+Righe 185-270:   LiveVideoComposer.__init__, setup_style, create_widgets (UI 3 colonne)
+Righe 810-850:   Setup drag & drop (windnd + fallback tkinterdnd2)
+Righe 894-980:   Init canvas, preset qualita, size display
+Righe 1040-1230: Gestione layer (add, load con downscale, remove, move, duplicate, fit)
+Righe 1400-1480: Trasformazioni (zoom, rotation, position, flip)
+Righe 1520-1720: Rendering canvas (composite, handles, debounce, fast_mode)
+Righe 1720-2060: Mouse handlers, scroll, keyboard, output settings
+Righe 2060-2400: Export image/video (threading, cancellabile, GIF ottimizzata)
+Righe 2420-2430: main() entry point
 ```
 
 ---

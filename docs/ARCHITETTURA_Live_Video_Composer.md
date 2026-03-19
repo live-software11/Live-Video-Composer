@@ -109,7 +109,7 @@ Live video composer/
 ├── requirements.txt
 ├── Live_Video_Composer.spec           — PyInstaller onedir (installer)
 ├── Live_Video_Composer_Portable.spec  — PyInstaller onefile (portable)
-├── installer.iss              — Inno Setup (v1.4.1, WizardStyle=modern,dark)
+├── installer.iss              — Inno Setup (v1.4.1, WizardStyle=modern)
 ├── icon.ico                   — Icona applicazione
 ├── icons/                     — Icona sorgente (per scripts/create-icon.py)
 ├── installer-wizard.bmp       — Grafica wizard Inno (164×314, stile broadcast)

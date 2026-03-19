@@ -12,7 +12,7 @@ L'installer deve trasmettere **modernità e tecnologia** coerente con il target 
 
 ## Configurazione installer.iss
 
-- **WizardStyle**: `modern,dark` — tema scuro
+- **WizardStyle**: `modern` — tema scuro tramite immagini wizard (installer-wizard.bmp)
 - **WizardImageFile**: `installer-wizard.bmp` (164×314) — pannello sinistro Welcome/Finish
 - **WizardSmallImageFile**: `installer-wizard-small.bmp` (55×58) — angolo alto destra
 

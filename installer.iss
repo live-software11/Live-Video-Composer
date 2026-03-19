@@ -36,8 +36,8 @@ WizardSmallImageFile=installer-wizard-small.bmp
 MinVersion=10.0
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; Aspetto moderno broadcast (dark, coerente con target live)
-WizardStyle=modern,dark
+; Aspetto moderno (dark da immagini wizard installer-wizard.bmp)
+WizardStyle=modern
 ; Permessi
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog

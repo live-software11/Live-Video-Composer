@@ -44,8 +44,8 @@ Live video composer/
 ├── _clean_and_build.bat       — Build completa (clean + installer + portable + setup)
 ├── _build_setup.bat           — Solo setup (richiede dist/)
 ├── docs/
-│   ├── ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md
-│   ├── System_Prompt_Claude_Live_Video_Composer.md  — Questo file
+│   ├── ARCHITETTURA_Live_Video_Composer.md
+│   ├── Istruzioni_Progetto_Claude_Live_Video_Composer.md  — Questo file
 │   ├── Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md
 │   ├── Performance_Improvements_Live_Video_Composer.md
 │   └── Setup_Cursor_Git_Live_Video_Composer.md
@@ -64,7 +64,7 @@ Live video composer/
 | Exe portable | `release/Live_Video_Composer_Portable.exe` |
 | Setup installer | `release/Live_Video_Composer_Setup.exe` |
 | Log | `%LOCALAPPDATA%\LiveVideoComposer\live_video_composer.log` |
-| Architettura | `docs/ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md` |
+| Architettura | `docs/ARCHITETTURA_Live_Video_Composer.md` |
 
 ---
 
@@ -204,7 +204,7 @@ SPEC:
 IMPLEMENTAZIONE:
 1. In ImageLayer: <istruzioni> (se tocca data model)
 2. In LiveVideoComposer: <istruzioni>
-3. Aggiornare docs/ARCHITETTURA_DEFINITIVA
+3. Aggiornare docs/ARCHITETTURA
 
 VINCOLI:
 - Export in thread con _start_export/_stop_export
@@ -216,7 +216,7 @@ VINCOLI:
 ## SINCRONIZZAZIONE DOCUMENTAZIONE (SACRA)
 
 **Ogni modifica significativa al codice richiede l'aggiornamento di:**
-1. `docs/ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md`
+1. `docs/ARCHITETTURA_Live_Video_Composer.md`
 2. `.cursor/rules/` — project, build, main-py
 3. **Questo file** — se cambia contesto, vincoli, formato task
 
@@ -238,5 +238,5 @@ pip install -r requirements.txt   # Dipendenze
 
 ## DOCUMENTAZIONE COMPLETA
 
-- `docs/ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md` — documento unico di riferimento
+- `docs/ARCHITETTURA_Live_Video_Composer.md` — documento unico di riferimento
 - `docs/Performance_Improvements_Live_Video_Composer.md` — analisi colli di bottiglia e ottimizzazioni

@@ -126,8 +126,8 @@ Live video composer/
 │       ├── main-py.mdc
 │       └── git-autonomy.mdc
 ├── docs/
-│   ├── ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md  — QUESTO FILE
-│   ├── System_Prompt_Claude_Live_Video_Composer.md
+│   ├── ARCHITETTURA_Live_Video_Composer.md  — QUESTO FILE
+│   ├── Istruzioni_Progetto_Claude_Live_Video_Composer.md
 │   ├── Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md
 │   ├── Performance_Improvements_Live_Video_Composer.md
 │   ├── Setup_Cursor_Git_Live_Video_Composer.md

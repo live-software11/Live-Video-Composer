@@ -1,47 +1,46 @@
 ---
-description: Regola SACRA — sincronizzazione documentazione a ogni modifica significativa
+description: Regola SACRA — documentazione sempre aggiornata alla fine di ogni operazione
 alwaysApply: true
 ---
 
 # Sincronizzazione Documentazione (SACRA)
 
-**Ogni modifica significativa al codice o all'architettura richiede l'aggiornamento di:**
+**Alla fine di ogni operazione significativa**, i seguenti documenti devono essere **aggiornati in modo dettagliato e professionale**. Non è opzionale: la documentazione è parte del codice.
 
-*Stack corrente (v1.4.1):* Python 3.9+, Pillow >=12.1.0, opencv-python-headless >=4.10.0, numpy >=1.26.0, PyInstaller >=6.0
+---
 
-1. **`docs/ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md`**
-   - Nuove funzioni/metodi → sezione Mappa File e Funzioni
-   - Cambi data model (ImageLayer, LiveVideoComposer) → sezione Data Model
-   - Nuova logica export/flusso → sezioni Export e Flussi
-   - Nuovi vincoli → sezione Vincoli e Regole
-   - **Cambi stack/versioni** → sezioni Stack e Changelog
+## Documenti obbligatori da aggiornare
 
-2. **`.cursor/rules/`** (Cursor rules)
-   - `project.mdc` — se cambia stack, struttura, workflow
-   - `build.mdc` — se cambiano spec, installer, comandi build
-   - `main-py.mdc` — se cambiano pattern main.py, ottimizzazioni
+| Documento | Contenuto | Quando aggiornare |
+|-----------|-----------|-------------------|
+| `docs/ARCHITETTURA_Live_Video_Composer.md` | Data model, stack, export, flussi | Nuove funzioni, cambi ImageLayer/LiveVideoComposer, modifiche export |
+| `docs/README.md` | Indice documentazione, documento vendita IT/EN | Nuove funzionalità, nuovi documenti, cambi descrizione prodotto |
+| `docs/Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md` | Prompt avvio chat Claude Desktop | Cambi ambiti analisi, fonti obbligatorie |
+| `docs/Istruzioni_Progetto_Claude_Live_Video_Composer.md` | Istruzioni progetto per Claude (architetto) | Cambi data model, vincoli sacri, struttura file, flusso export |
+| `docs/Guida_Aggiornamenti_Live_Video_Composer.md` | Procedure safe pip, versioni stack | Cambi versioni Python/Pillow/OpenCV, procedure aggiornamento |
 
-3. **`docs/System_Prompt_Claude_Live_Video_Composer.md`**
-   - Se cambia data model, vincoli sacri, struttura file, flusso export
-   - Claude (architetto) deve avere sempre la versione aggiornata per produrre task corretti
+---
 
-4. **`docs/Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md`**
-   - Se cambiano ambiti di analisi o fonti obbligatorie per Claude Desktop
+## Linee guida aggiornamento
 
-5. **`README.md`**
-   - Se cambiano funzionalità utente, preset, export, requisiti, changelog
+- **Dettagliato:** Ogni modifica al codice deve riflettersi nella documentazione corrispondente
+- **Professionale:** Stile chiaro, tabelle per confronti, blocchi di codice per pattern
+- **Tempestivo:** Aggiornare **alla fine** di ogni operazione, non come afterthought
 
-6. **`docs/Performance_Improvements_Live_Video_Composer.md`**
-   - Se implementi nuove ottimizzazioni o modifichi quelle esistenti
+---
 
-**Quando applicare:**
-- Nuove feature, refactor strutturali, modifiche a ImageLayer o LiveVideoComposer
-- Cambi a create_composite_image, get_transformed_image, export image/video
-- Nuovi vincoli o regole di business
-- Modifiche a load_image, load_video, _process_dropped_files
+## Checklist obbligatoria (fine operazione)
 
-**Checklist pre-commit (modifiche significative):**
-- [ ] ARCHITETTURA_DEFINITIVA aggiornato
-- [ ] Cursor rules allineate
-- [ ] System_Prompt_Claude aggiornato (se tocca contesto/task format)
-- [ ] README.md changelog aggiornato
+- [ ] `docs/ARCHITETTURA_Live_Video_Composer.md` — Mappa file, data model, export allineati
+- [ ] `docs/README.md` — Indice documenti e descrizione prodotto aggiornati
+- [ ] `docs/Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md` — Fonti e ambiti verificati
+- [ ] `docs/Istruzioni_Progetto_Claude_Live_Video_Composer.md` — Contesto e task format aggiornati
+- [ ] `docs/Guida_Aggiornamenti_Live_Video_Composer.md` — Versioni stack e procedure corrette
+
+---
+
+## Documenti correlati (aggiornare se pertinente)
+
+- `README.md` (root) — Se cambiano funzionalità utente, preset, export, changelog
+- `docs/Performance_Improvements_Live_Video_Composer.md` — Se implementi nuove ottimizzazioni
+- `.cursor/rules/` — Se cambia stack, workflow, vincoli

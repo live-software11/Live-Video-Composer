@@ -12,8 +12,8 @@ Sei l'architetto senior del progetto Live Video Composer (applicazione desktop m
 OBIETTIVO: Analizza a fondo il progetto e produci un file Markdown da far eseguire a Cursor Composer.
 
 FONTI OBBLIGATORIE:
-- Leggi `docs/ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md` (struttura, data model, vincoli, flussi)
-- Leggi `docs/System_Prompt_Claude_Live_Video_Composer.md` (formato task)
+- Leggi `docs/ARCHITETTURA_Live_Video_Composer.md` (struttura, data model, vincoli, flussi)
+- Leggi `docs/Istruzioni_Progetto_Claude_Live_Video_Composer.md` (formato task)
 - Leggi `docs/Performance_Improvements_Live_Video_Composer.md` (ottimizzazioni implementate)
 - Controlla `main.py` (ImageLayer, LiveVideoComposer, load_image, create_composite_image, export)
 - Usa strumenti MCP (Fetch, npm) per verificare versioni Pillow/OpenCV e CVE

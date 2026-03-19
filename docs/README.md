@@ -1,22 +1,105 @@
-# Documentazione Live Video Composer
+# Live Video Composer — Documento per la vendita
 
-> **v1.4.1** | Python 3.9+ | Pillow >=12.1.0 | opencv-python-headless >=4.10.0
-> Naming: tutti i documenti usano il suffisso `_Live_Video_Composer` per coerenza con Live PLAN e Live CREW.
+> Documento completo per accompagnare la vendita del prodotto.  
+> **Italiano** e **English** — Complete product description for sales.
 
-## Struttura output build
+---
 
-| Cartella | Contenuto |
-|----------|-----------|
-| `release/` | Output build: Live_Video_Composer_Portable.exe, Live_Video_Composer_Setup.exe |
+# Italiano
 
-**Build:** `clean-and-build.bat` (root) → output in `release/`
+## Cos'è Live Video Composer
 
-## Indice documenti
+**Live Video Composer** è un'applicazione desktop per la creazione di **collage multi-layer** con immagini e video. Permette di sovrapporre più elementi, applicare trasformazioni (zoom, rotazione, flip) e esportare a risoluzioni professionali.
+
+L'app supporta:
+
+- **Multi-layer** — Sovrapponi più immagini e video in un'unica composizione
+- **Trasformazioni** — Zoom 1–1000%, rotazione -180°/+180°, flip orizzontale/verticale
+- **Handle visivi** — Ridimensiona e ruota con handle stile PowerPoint
+- **Export immagine** — JPG, PNG, WebP, BMP con preset qualità
+- **Export video** — MP4, AVI, WebM, GIF animata con preset bitrate
+
+## Per chi è
+
+- Content creator
+- Social media manager
+- Tecnici AV per eventi live
+- Chi deve adattare contenuti a formati diversi (16:9, 9:16, quadrato, banner)
+
+## Funzionalità principali
+
+- **Drag & Drop** — Trascina file direttamente nella finestra
+- **Preset risoluzioni** — Full HD, 4K, verticale 9:16, quadrato, banner social (Facebook, Twitter, Instagram)
+- **Sfondo personalizzabile** — Colore o immagine
+- **Export cancellabile** — Puoi annullare l'export in corso
+- **Portable** — Versione singolo .exe senza installazione
+
+## Requisiti
+
+- **Sistema:** Windows 10/11
+- **Python:** 3.9+ (solo per sviluppo; l'exe portable non richiede Python)
+- **RAM:** 4 GB minimo, 8 GB consigliato per video
+
+## Come funziona
+
+1. Trascina immagini o video nella finestra
+2. Ordina i layer, applica zoom, rotazione, flip
+3. Scegli la risoluzione di output (preset o personalizzata)
+4. Esporta come immagine (JPG, PNG, WebP) o video (MP4, GIF)
+
+---
+
+# English
+
+## What is Live Video Composer
+
+**Live Video Composer** is a desktop application for creating **multi-layer collages** with images and video. It lets you overlay multiple elements, apply transformations (zoom, rotation, flip), and export at professional resolutions.
+
+The app supports:
+
+- **Multi-layer** — Overlay multiple images and video in a single composition
+- **Transformations** — Zoom 1–1000%, rotation -180°/+180°, horizontal/vertical flip
+- **Visual handles** — Resize and rotate with PowerPoint-style handles
+- **Image export** — JPG, PNG, WebP, BMP with quality presets
+- **Video export** — MP4, AVI, WebM, animated GIF with bitrate presets
+
+## Who it's for
+
+- Content creators
+- Social media managers
+- AV technicians for live events
+- Anyone adapting content to different formats (16:9, 9:16, square, banners)
+
+## Main features
+
+- **Drag & Drop** — Drag files directly into the window
+- **Resolution presets** — Full HD, 4K, vertical 9:16, square, social banners (Facebook, Twitter, Instagram)
+- **Customizable background** — Color or image
+- **Cancellable export** — Cancel export in progress
+- **Portable** — Single .exe version, no installation
+
+## Requirements
+
+- **System:** Windows 10/11
+- **Python:** 3.9+ (development only; portable exe does not require Python)
+- **RAM:** 4 GB minimum, 8 GB recommended for video
+
+## How it works
+
+1. Drag images or video into the window
+2. Order layers, apply zoom, rotation, flip
+3. Choose output resolution (preset or custom)
+4. Export as image (JPG, PNG, WebP) or video (MP4, GIF)
+
+---
+
+## Indice documenti tecnici
 
 | File | Contenuto |
 |------|-----------|
-| `ARCHITETTURA_DEFINITIVA_Live_Video_Composer.md` | Documento unico di riferimento (stack, data model, vincoli, flussi) |
-| `System_Prompt_Claude_Live_Video_Composer.md` | Prompt Claude Desktop (architetto, formato task) |
-| `Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md` | Prompt avvio chat Claude Desktop |
-| `Performance_Improvements_Live_Video_Composer.md` | Analisi colli di bottiglia e ottimizzazioni |
-| `Setup_Cursor_Git_Live_Video_Composer.md` | Setup Cursor per git autonomo |
+| `ARCHITETTURA_Live_Video_Composer.md` | Documento unico di riferimento |
+| `Istruzioni_Progetto_Claude_Live_Video_Composer.md` | Istruzioni progetto Claude Desktop |
+| `Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md` | Prompt avvio chat |
+| `Guida_Aggiornamenti_Live_Video_Composer.md` | Procedure safe pip, versioni stack |
+
+**GitHub:** https://github.com/live-software11/Live-Video-Composer

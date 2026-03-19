@@ -43,7 +43,8 @@ Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita i
 
 ## Struttura
 - `main.py` - Sorgente unico (~2340 righe)
-- `docs/` - ARCHITETTURA, Istruzioni_Progetto_Claude, Primo_Prompt, Performance_Improvements, Setup_Cursor_Git
+- `localization.py` - Dizionari i18n (it/en), funzione t()
+- `docs/` - ARCHITETTURA, Istruzioni_Progetto_Claude, Primo_Prompt, BugFix_Refactor, README (vendita IT/EN)
 - `release/` - Output build (Portable.exe, Setup.exe)
 - `_clean_and_build.bat` - Build completa (installer+portable+setup). `_build_setup.bat` - Solo setup (richiede dist/Live_Video_Composer/)
 - `icon.ico` - Obbligatorio in root per spec

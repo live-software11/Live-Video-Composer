@@ -12,7 +12,7 @@ REM Verifica che esista la cartella dist/Live_Video_Composer (creata da clean-an
 if not exist "dist\Live_Video_Composer\Live_Video_Composer.exe" (
     echo ERRORE: dist\Live_Video_Composer\Live_Video_Composer.exe non trovata!
     echo.
-    echo La cartella dist viene creata da clean-and-build.bat
+    echo La cartella dist viene creata da _clean_and_build.bat
     echo Esegui _clean_and_build.bat e poi riprova _build_setup.bat
     echo.
     goto :fine

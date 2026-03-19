@@ -106,6 +106,7 @@
 ```
 Live video composer/
 ├── main.py                    — Sorgente unico (~2340 righe)
+├── localization.py            — Dizionari i18n (it/en), funzione t()
 ├── requirements.txt
 ├── Live_Video_Composer.spec           — PyInstaller onedir (installer)
 ├── Live_Video_Composer_Portable.spec  — PyInstaller onefile (portable)
@@ -119,7 +120,6 @@ Live video composer/
 │   └── create-installer-wizard.py — Genera BMP wizard (stile dark)
 ├── _clean_and_build.bat       — Build completa
 ├── _build_setup.bat           — Solo setup (richiede dist/)
-├── clean-and-build.bat        — Alias
 ├── build_exe.py               — Script build interattivo
 ├── .cursor/
 │   └── rules/
@@ -127,18 +127,19 @@ Live video composer/
 │       ├── doc-sync.mdc
 │       ├── build.mdc
 │       ├── main-py.mdc
-│       └── git-autonomy.mdc
+│       ├── git-autonomy.mdc
+│       ├── i18n-installer.mdc
+│       └── installer-modern.mdc
 ├── docs/
 │   ├── ARCHITETTURA_Live_Video_Composer.md  — QUESTO FILE
 │   ├── Istruzioni_Progetto_Claude_Live_Video_Composer.md
 │   ├── Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md
-│   ├── Performance_Improvements_Live_Video_Composer.md
-│   ├── Setup_Cursor_Git_Live_Video_Composer.md
-│   └── README.md
-├── release/                   — Output build
+│   ├── BugFix_Refactor_Implementazioni_Live_Video_Composer.md
+│   └── README.md              — Documento vendita IT/EN
+├── release/                   — Output build (gitignore)
 ├── dist/                      — Output PyInstaller (gitignore)
 ├── build/                     — Cache PyInstaller (gitignore)
-└── README.md
+└── README.md                  — README progetto (GitHub)
 ```
 
 ### Percorsi eseguibile
@@ -329,7 +330,7 @@ export_video() → _start_export() → Thread: _do_export_video()
 7. **Division-by-zero** — max(1, output_w/h), max(1, fps), max(1, img_w/h)
 8. **python -m PyInstaller** — Non pyinstaller diretto
 9. **opencv-python-headless** — Preferire a opencv-python
-10. **i18n** — Ogni stringa UI aggiunta in `localization.py` sia in `it` che in `en`. Terminologia EN professionale video/AV. Primo avvio in inglese (`_CURRENT_LANG = "en"`). Lingua salvata alla chiusura. Installer Inno Setup in inglese. Vedi `docs/Istruzioni_Traduzione_i18n_Live_Video_Composer.md`.
+10. **i18n** — Ogni stringa UI via `t("chiave")` da `localization.py`. Dizionari `_TRANSLATIONS["it"]` e `_TRANSLATIONS["en"]` (~116 chiavi flat con prefisso: app., layers., btn., transform., size., fit., mirror., canvas., output., export., preset., status., error., layer., menu.). Placeholder `{0}`, `{1}` (str.format). Primo avvio in inglese (`_CURRENT_LANG = "en"`). Lingua salvata in `%LOCALAPPDATA%\LiveVideoComposer\lang.json`. Toggle IT/EN in header (cyan attivo, blu scuro inattivo). Terminologia EN professionale video/AV. Installer Inno Setup in inglese.
 
 ---
 
@@ -369,7 +370,7 @@ _clean_and_build.bat              # clean + installer + portable + Inno Setup
 | 7 | fast_mode NEAREST durante drag | 3-4x rotation/resize |
 | 8 | opencv-python-headless | ~50MB build in meno |
 
-Vedi `docs/Performance_Improvements_Live_Video_Composer.md` per analisi dettagliata.
+Dettaglio storico in `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.md`.
 
 ---
 

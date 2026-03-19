@@ -11,7 +11,7 @@ alwaysApply: false
 IMPORTANTE: usare sempre `python -m PyInstaller` (non `pyinstaller` diretto, che potrebbe non essere nel PATH su installazioni utente).
 
 ### Build rapida (doppio click)
-`clean-and-build.bat` (o `_clean_and_build.bat`): pulisce, builda installer (onedir), portable (onefile), setup Inno (se ISCC nel PATH). Output in `release/`.
+`_clean_and_build.bat`: pulisce, builda installer (onedir), portable (onefile), setup Inno (se ISCC nel PATH). Output in `release/`.
 `_build_setup.bat`: solo generazione setup. PREREQUISITO: eseguire prima build installer (dist/Live_Video_Composer/ deve esistere).
 
 ### Versione Installer (per Inno Setup)

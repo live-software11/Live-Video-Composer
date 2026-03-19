@@ -47,12 +47,9 @@ Live video composer/
 ├── docs/
 │   ├── ARCHITETTURA_Live_Video_Composer.md
 │   ├── Istruzioni_Progetto_Claude_Live_Video_Composer.md  — Questo file
-│   ├── Istruzioni_Traduzione_i18n_Live_Video_Composer.md
-│   ├── audit-i18n-LiveComposer.md
-│   ├── revisione-i18n-LiveComposer.md
 │   ├── Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md
-│   ├── Performance_Improvements_Live_Video_Composer.md
-│   └── Setup_Cursor_Git_Live_Video_Composer.md
+│   ├── BugFix_Refactor_Implementazioni_Live_Video_Composer.md
+│   └── README.md              — Documento vendita IT/EN
 ├── .cursor/rules/
 │   ├── project.mdc            — Regole generali
 │   ├── doc-sync.mdc           — Sync documentazione
@@ -225,7 +222,7 @@ VINCOLI:
 2. `.cursor/rules/` — project, build, main-py, doc-sync
 3. **Questo file** — se cambia contesto, vincoli, formato task
 
-**Regola i18n UI:** Ogni modifica alle stringhe in italiano (`localization.py` it) deve essere applicata anche in inglese (en). Terminologia EN professionale video/compositing/AV. Workflow audit/revisione completato 19/03/2026. Vedi `docs/Istruzioni_Traduzione_i18n_Live_Video_Composer.md`.
+**Regola i18n UI:** Ogni modifica alle stringhe in italiano (`localization.py` it) deve essere applicata anche in inglese (en). Terminologia EN professionale video/compositing/AV. Dettagli tecnici i18n in `docs/ARCHITETTURA_Live_Video_Composer.md` (vincolo #10).
 
 **Regola i18n Installer:** Installer Inno Setup in inglese. Primo avvio in inglese (_CURRENT_LANG = "en"). Lingua salvata in lang.json alla chiusura. Vedi `.cursor/rules/i18n-installer.mdc`. Grafiche installer: `.cursor/rules/installer-modern.mdc`.
 
@@ -247,5 +244,5 @@ pip install -r requirements.txt   # Dipendenze
 
 ## DOCUMENTAZIONE COMPLETA
 
-- `docs/ARCHITETTURA_Live_Video_Composer.md` — documento unico di riferimento
-- `docs/Performance_Improvements_Live_Video_Composer.md` — analisi colli di bottiglia e ottimizzazioni
+- `docs/ARCHITETTURA_Live_Video_Composer.md` — documento unico di riferimento (stack, data model, export, flussi, i18n, ottimizzazioni)
+- `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.md` — tracciamento bug fix, refactor e implementazioni

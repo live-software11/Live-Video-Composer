@@ -97,9 +97,9 @@ The app supports:
 
 | File | Contenuto |
 |------|-----------|
-| `ARCHITETTURA_Live_Video_Composer.md` | Documento unico di riferimento |
-| `Istruzioni_Progetto_Claude_Live_Video_Composer.md` | Istruzioni progetto Claude Desktop |
-| `Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md` | Prompt avvio chat |
-| `Guida_Aggiornamenti_Live_Video_Composer.md` | Procedure safe pip, versioni stack |
+| `ARCHITETTURA_Live_Video_Composer.md` | Documento unico di riferimento (stack, data model, export, flussi) |
+| `Istruzioni_Progetto_Claude_Live_Video_Composer.md` | Istruzioni progetto per Claude Desktop |
+| `Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md` | Prompt avvio chat Claude Desktop |
+| `BugFix_Refactor_Implementazioni_Live_Video_Composer.md` | Tracciamento bug fix, refactor e implementazioni |
 
 **GitHub:** https://github.com/live-software11/Live-Video-Composer

@@ -57,7 +57,7 @@ Il file `main.py` contiene tutto il codice sorgente (~2340 righe):
 - _cached_canvas_size: evita update_idletasks nel hot path
 - _canvas_persistent_ids: riuso bg/img/border invece di delete/create
 - load_image: downscale working copy (max 2x output), _original_path per export a piena risoluzione
-- Vedi docs/Performance_Improvements_Live_Video_Composer.md per analisi colli di bottiglia
+- Dettaglio ottimizzazioni in docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.md e ARCHITETTURA sezione 13
 
 ### Export in thread separato
 ```python

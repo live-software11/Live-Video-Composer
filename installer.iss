@@ -29,19 +29,23 @@ SolidCompression=yes
 ; Icona setup e uninstall
 SetupIconFile=icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
+; Grafiche wizard (stile broadcast, dark)
+WizardImageFile=installer-wizard.bmp
+WizardSmallImageFile=installer-wizard-small.bmp
 ; Requisiti
 MinVersion=10.0
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; Aspetto moderno
-WizardStyle=modern
+; Aspetto moderno broadcast (dark, coerente con target live)
+WizardStyle=modern,dark
 ; Permessi
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 
 [Languages]
-Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
+; Lingua ufficiale: Inglese (i18n-installer.mdc)
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked

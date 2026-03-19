@@ -30,6 +30,9 @@ Output: `dist/Live_Video_Composer_Portable.exe` (singolo file eseguibile)
 Compilare `installer.iss` con Inno Setup Compiler (Ctrl+F9) dopo la build della versione installer.
 Output: `release/Live_Video_Composer_Setup.exe`
 
+### Grafiche wizard (stile broadcast)
+`_clean_and_build.bat` genera `installer-wizard.bmp` e `installer-wizard-small.bmp` se mancanti (`python scripts/create-installer-wizard.py`). Vedi installer-modern.mdc.
+
 ## Regole CRITICHE
 
 ### Drag & Drop (portable funzionante)

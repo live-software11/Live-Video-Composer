@@ -15,6 +15,11 @@ import os
 import logging
 import gc
 
+from localization import (
+    t, init_language, set_language, get_language,
+    get_preset_values, preset_display_to_id, preset_id_to_resolution,
+)
+
 # Configura logging (solo su file in temp user, non nella cartella dell'exe)
 def _get_log_path():
     """Restituisce il percorso del file di log in una posizione non invasiva"""
@@ -54,23 +59,6 @@ except ImportError:
 IMAGE_FORMATS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp', '.tiff'}
 VIDEO_FORMATS = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm'}
 
-# Preset di risoluzioni comuni
-RESOLUTION_PRESETS = {
-    "Personalizzato": None,
-    "1920x1080 (Full HD 16:9)": (1920, 1080),
-    "1280x720 (HD 16:9)": (1280, 720),
-    "3840x2160 (4K 16:9)": (3840, 2160),
-    "1080x1920 (Full HD 9:16 Verticale)": (1080, 1920),
-    "1080x1080 (Quadrato 1:1)": (1080, 1080),
-    "1200x400 (Banner 3:1)": (1200, 400),
-    "1500x500 (Twitter Header 3:1)": (1500, 500),
-    "820x312 (Facebook Cover)": (820, 312),
-    "1280x720 (YouTube Thumbnail)": (1280, 720),
-    "1080x608 (Instagram Landscape)": (1080, 608),
-    "800x600 (4:3)": (800, 600),
-    "1024x768 (4:3)": (1024, 768),
-}
-
 # Costanti per gli handle
 HANDLE_SIZE = 8
 HANDLE_COLOR = "#4a9eff"
@@ -84,10 +72,10 @@ class ImageLayer:
                  'video_fps', 'video_frames', 'bounds_in_canvas', '_cache', '_cache_key',
                  '_zoom_cache', '_zoom_cache_key', '_original_path']
 
-    def __init__(self, image, name="Immagine"):
+    def __init__(self, image, name=None):
         self.id = str(uuid.uuid4())[:8]
         self.original_image = image
-        self.name = name
+        self.name = name if name is not None else t("layer.default_name")
 
         # Trasformazioni
         self.offset_x = 0
@@ -185,7 +173,7 @@ class ImageLayer:
 class LiveVideoComposer:
     def __init__(self, root):
         self.root = root
-        self.root.title("Live Video Composer  •  Image & Video Editor")
+        self.root.title(t("app.title"))
         self.root.state('zoomed')  # Fullscreen su Windows
         self.root.minsize(1100, 700)
 
@@ -248,6 +236,7 @@ class LiveVideoComposer:
 
         # Setup
         self.setup_style()
+        self._set_window_icon()
         self.create_widgets()
         self.setup_bindings()
         self.setup_drag_and_drop()
@@ -390,13 +379,144 @@ class LiveVideoComposer:
         # Progressbar
         style.configure("TProgressbar", background=self.accent_color, troughcolor=self.bg_secondary)
 
+    def _set_window_icon(self):
+        """Imposta l'icona della finestra da icon.ico. Rigenerare con: python scripts/create-icon.py"""
+        icon_path = Path(__file__).resolve().parent / "icon.ico"
+        if icon_path.exists():
+            try:
+                self.root.iconbitmap(str(icon_path))
+            except tk.TclError:
+                pass
+
     def create_widgets(self):
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+        # Header con toggle lingua (lingua attiva evidenziata)
+        header_frame = tk.Frame(main_frame, bg=self.bg_color)
+        header_frame.pack(fill=tk.X, pady=(0, 5))
+        tk.Frame(header_frame, bg=self.bg_color).pack(side=tk.LEFT, expand=True)
+        lang_frame = tk.Frame(header_frame, bg=self.bg_color)
+        lang_frame.pack(side=tk.RIGHT)
+        self.lang_btn_it = tk.Button(lang_frame, text="IT", width=3, font=('Segoe UI', 9, 'bold'),
+                                     relief=tk.FLAT, bd=0, cursor='hand2',
+                                     command=lambda: self._set_lang("it"))
+        self.lang_btn_it.pack(side=tk.LEFT, padx=1)
+        self.lang_btn_it.bind("<Enter>", lambda e: self._lang_btn_hover("it", True))
+        self.lang_btn_it.bind("<Leave>", lambda e: self._lang_btn_hover("it", False))
+        self.lang_btn_en = tk.Button(lang_frame, text="EN", width=3, font=('Segoe UI', 9, 'bold'),
+                                     relief=tk.FLAT, bd=0, cursor='hand2',
+                                     command=lambda: self._set_lang("en"))
+        self.lang_btn_en.pack(side=tk.LEFT, padx=1)
+        self.lang_btn_en.bind("<Enter>", lambda e: self._lang_btn_hover("en", True))
+        self.lang_btn_en.bind("<Leave>", lambda e: self._lang_btn_hover("en", False))
+
         self.create_left_panel(main_frame)
         self.create_canvas_panel(main_frame)
         self.create_right_panel(main_frame)
+
+        self.apply_localization()
+
+    def _set_lang(self, lang):
+        """Cambio lingua istantaneo (modello Live 3D LEDWall Render)."""
+        set_language(lang)
+        self.apply_localization()
+
+    def _update_lang_toggle_style(self):
+        """Evidenzia la lingua attiva nel toggle IT/EN (cyan acceso = attivo)."""
+        self._apply_lang_btn_style("it", False)
+        self._apply_lang_btn_style("en", False)
+
+    def _lang_btn_hover(self, code, entering):
+        """Hover sui pulsanti lingua."""
+        self._apply_lang_btn_style(code, entering)
+
+    def _apply_lang_btn_style(self, code, hover):
+        """Applica stile al pulsante lingua (attivo = cyan acceso, inattivo = grigio, hover = leggermente più chiaro)."""
+        lang = get_language()
+        active_bg = self.accent_color
+        active_fg = "#0a1929"
+        inactive_bg = self.bg_tertiary if hover else self.bg_secondary
+        inactive_fg = self.fg_color
+        btn = self.lang_btn_it if code == "it" else self.lang_btn_en
+        is_active = lang == code
+        bg = active_bg if is_active else inactive_bg
+        fg = active_fg if is_active else inactive_fg
+        btn.config(bg=bg, fg=fg, activebackground=bg, activeforeground=fg)
+
+    def apply_localization(self):
+        """Aggiorna tutte le stringhe UI alla lingua corrente."""
+        self.root.title(t("app.title"))
+        self._update_lang_toggle_style()
+        self.layers_frame.config(text=t("layers.title"))
+        self.layer_controls_frame.config(text=t("transform.title"))
+        self.zoom_label.config(text=t("transform.scale"))
+        self.rotation_label.config(text=t("transform.rotation"))
+        self.pan_label.config(text=t("transform.pan"))
+        self.tilt_label.config(text=t("transform.tilt"))
+        self.size_frame.config(text=t("size.title"))
+        self.size_label_w.config(text=t("size.label_w"))
+        self.size_label_h.config(text=t("size.label_h"))
+        self.output_label_w.config(text=t("size.label_w"))
+        self.output_label_h.config(text=t("size.label_h"))
+        self.lock_aspect_btn.config(text=t("size.lock") if self.lock_aspect_ratio.get() else t("size.unlock"))
+        self.fit_adapt_btn.config(text=t("fit.adapt"))
+        self.fit_fill_btn.config(text=t("fit.fill"))
+        self.fit_fill_h_btn.config(text=t("fit.fill_h"))
+        self.fit_fill_v_btn.config(text=t("fit.fill_v"))
+        self.btn_center.config(text=t("btn.center"))
+        self.mirror_frame.config(text=t("mirror.title"))
+        self.mirror_h_btn.config(text=t("mirror.h"))
+        self.mirror_v_btn.config(text=t("mirror.v"))
+        self.file_label.config(text=t("canvas.drag_hint"))
+        self.instruction_label.config(text=t("canvas.instructions"))
+        self.canvas_add_btn.config(text=t("canvas.add_file"))
+        self.canvas_remove_btn.config(text=t("canvas.remove_all"))
+        self.output_frame.config(text=t("output.title"))
+        self.output_preset_label.config(text=t("output.preset"))
+        self.output_apply_btn.config(text=t("output.apply"))
+        self.bg_frame.config(text=t("bg.title"))
+        self.bg_custom_btn.config(text=t("bg.custom"))
+        self.image_export_frame.config(text=t("export_img.title") if self.layers else t("export_img.title_disabled"))
+        self.export_img_format_label.config(text=t("export_img.format"))
+        self.export_img_quality_label.config(text=t("export_img.quality"))
+        self.qual_low_rb.config(text=t("export_img.low"))
+        self.qual_med_rb.config(text=t("export_img.medium"))
+        self.qual_high_rb.config(text=t("export_img.high"))
+        self.img_export_btn.config(text=t("export_img.btn"))
+        has_vid = any(getattr(l, "is_video", False) for l in self.layers)
+        self.video_export_frame.config(text=t("export_vid.title") if has_vid else t("export_vid.title_disabled"))
+        self.export_vid_format_label.config(text=t("export_vid.format"))
+        self.export_vid_fps_label.config(text=t("export_vid.fps"))
+        self.export_vid_quality_label.config(text=t("export_vid.quality"))
+        self.vid_qual_low_rb.config(text=t("export_img.low"))
+        self.vid_qual_med_rb.config(text=t("export_img.medium"))
+        self.vid_qual_high_rb.config(text=t("export_img.high"))
+        self.vid_export_btn.config(text=t("export_vid.btn"))
+        self.cancel_btn.config(text=t("cancel_export"))
+        current = self.preset_combo.get()
+        self.preset_combo["values"] = get_preset_values()
+        pid = preset_display_to_id(current) if current else "fullhd"
+        self.preset_combo.set(t(f"preset.{pid}"))
+        self._refresh_dynamic_labels()
+
+    def _refresh_dynamic_labels(self):
+        """Aggiorna label che dipendono dallo stato (layer, export)."""
+        if not self.layers:
+            self.file_label.config(text=t("canvas.add_images_short"))
+            self.img_size_label.config(text=t("size.original_empty"))
+        else:
+            if any(getattr(l, "is_video", False) for l in self.layers):
+                vid = next(l for l in self.layers if getattr(l, "is_video", False))
+                dur = vid.video_frames / max(1, vid.video_fps)
+                self.file_label.config(text=t("canvas.elements_video", len(self.layers), f"{dur:.1f}", f"{vid.video_fps:.0f}"))
+            else:
+                self.file_label.config(text=t("canvas.elements", len(self.layers)))
+            if self.selected_layer:
+                ow, oh = self.selected_layer.original_image.size
+                self.img_size_label.config(text=t("size.original", f"{ow} x {oh}"))
+        w, h = self.output_width.get(), self.output_height.get()
+        self.info_label.config(text=t("canvas.output_layers", w, h, len(self.layers)) if self.layers else t("canvas.output", w, h))
 
     def create_left_panel(self, parent):
         """Pannello sinistro - Layers e controlli immagine selezionata (scrollabile)"""
@@ -430,11 +550,11 @@ class LiveVideoComposer:
         left_frame = self.left_scrollable_frame
 
         # === LAYERS ===
-        layers_frame = ttk.LabelFrame(left_frame, text="⭐ Layers", padding=10, style="Layers.TLabelframe")
-        layers_frame.pack(fill=tk.X, pady=(0, 12))
+        self.layers_frame = ttk.LabelFrame(left_frame, text=t("layers.title"), padding=10, style="Layers.TLabelframe")
+        self.layers_frame.pack(fill=tk.X, pady=(0, 12))
 
         # Lista layers con stile moderno
-        self.layers_listbox = tk.Listbox(layers_frame, height=8, bg=self.section_colors['layers'],
+        self.layers_listbox = tk.Listbox(self.layers_frame, height=8, bg=self.section_colors['layers'],
                                          fg=self.fg_color, selectbackground=self.accent_color,
                                          selectforeground="#0a1929", font=('Segoe UI', 9),
                                          bd=0, highlightthickness=1, highlightcolor=self.accent_color,
@@ -443,27 +563,31 @@ class LiveVideoComposer:
         self.layers_listbox.bind('<<ListboxSelect>>', self.on_layer_select)
 
         # Pulsanti layer
-        btn_frame = ttk.Frame(layers_frame)
+        btn_frame = ttk.Frame(self.layers_frame)
         btn_frame.pack(fill=tk.X)
 
-        ttk.Button(btn_frame, text="➕ Aggiungi", command=self.add_image).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0,2))
-        ttk.Button(btn_frame, text="➖ Rimuovi", command=self.remove_selected_layer).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2,0))
+        self.btn_add = ttk.Button(btn_frame, text=t("btn.add"), command=self.add_image)
+        self.btn_add.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0,2))
+        self.btn_remove = ttk.Button(btn_frame, text=t("btn.remove"), command=self.remove_selected_layer)
+        self.btn_remove.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2,0))
 
-        btn_frame2 = ttk.Frame(layers_frame)
+        btn_frame2 = ttk.Frame(self.layers_frame)
         btn_frame2.pack(fill=tk.X, pady=(3,0))
 
         ttk.Button(btn_frame2, text="▲", width=4, command=self.move_layer_up).pack(side=tk.LEFT, padx=(0,2))
         ttk.Button(btn_frame2, text="▼", width=4, command=self.move_layer_down).pack(side=tk.LEFT, padx=(2,2))
-        ttk.Button(btn_frame2, text="⧉ Duplica", command=self.duplicate_layer).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2,0))
+        self.btn_duplicate = ttk.Button(btn_frame2, text=t("btn.duplicate"), command=self.duplicate_layer)
+        self.btn_duplicate.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2,0))
 
         # === CONTROLLI LAYER SELEZIONATO ===
-        self.layer_controls_frame = ttk.LabelFrame(left_frame, text="⚙️ Trasformazioni", padding=8, style="Transform.TLabelframe")
+        self.layer_controls_frame = ttk.LabelFrame(left_frame, text=t("transform.title"), padding=8, style="Transform.TLabelframe")
         self.layer_controls_frame.pack(fill=tk.X, pady=(0, 8))
 
         # Zoom
         zoom_header = ttk.Frame(self.layer_controls_frame)
         zoom_header.pack(fill=tk.X)
-        ttk.Label(zoom_header, text="🔍 Scala:").pack(side=tk.LEFT)
+        self.zoom_label = ttk.Label(zoom_header, text=t("transform.scale"))
+        self.zoom_label.pack(side=tk.LEFT)
         self.zoom_entry = ttk.Entry(zoom_header, width=6)
         self.zoom_entry.pack(side=tk.RIGHT)
         self.zoom_entry.insert(0, "100")
@@ -484,7 +608,8 @@ class LiveVideoComposer:
         # Rotazione
         rot_header = ttk.Frame(self.layer_controls_frame)
         rot_header.pack(fill=tk.X)
-        ttk.Label(rot_header, text="🔄 Rotazione:").pack(side=tk.LEFT)
+        self.rotation_label = ttk.Label(rot_header, text=t("transform.rotation"))
+        self.rotation_label.pack(side=tk.LEFT)
         self.rotation_entry = ttk.Entry(rot_header, width=6)
         self.rotation_entry.pack(side=tk.RIGHT)
         self.rotation_entry.insert(0, "0")
@@ -505,7 +630,8 @@ class LiveVideoComposer:
         # Posizione X (Pan)
         pos_x_header = ttk.Frame(self.layer_controls_frame)
         pos_x_header.pack(fill=tk.X, pady=(5,0))
-        ttk.Label(pos_x_header, text="↔️ Pan (X):").pack(side=tk.LEFT)
+        self.pan_label = ttk.Label(pos_x_header, text=t("transform.pan"))
+        self.pan_label.pack(side=tk.LEFT)
         self.offset_x_entry = ttk.Entry(pos_x_header, width=7)
         self.offset_x_entry.pack(side=tk.RIGHT)
         self.offset_x_entry.insert(0, "0")
@@ -519,7 +645,8 @@ class LiveVideoComposer:
         # Posizione Y (Tilt)
         pos_y_header = ttk.Frame(self.layer_controls_frame)
         pos_y_header.pack(fill=tk.X)
-        ttk.Label(pos_y_header, text="↕️ Tilt (Y):").pack(side=tk.LEFT)
+        self.tilt_label = ttk.Label(pos_y_header, text=t("transform.tilt"))
+        self.tilt_label.pack(side=tk.LEFT)
         self.offset_y_entry = ttk.Entry(pos_y_header, width=7)
         self.offset_y_entry.pack(side=tk.RIGHT)
         self.offset_y_entry.insert(0, "0")
@@ -531,38 +658,40 @@ class LiveVideoComposer:
         self.offset_y_scale.pack(fill=tk.X)
 
         # === DIMENSIONI IMMAGINE IN PIXEL ===
-        size_frame = ttk.LabelFrame(self.layer_controls_frame, text="📐 Dimensioni (px)", padding=5, style="Size.TLabelframe")
-        size_frame.pack(fill=tk.X, pady=(10,0))
+        self.size_frame = ttk.LabelFrame(self.layer_controls_frame, text=t("size.title"), padding=5, style="Size.TLabelframe")
+        self.size_frame.pack(fill=tk.X, pady=(10,0))
 
-        size_row = ttk.Frame(size_frame)
+        size_row = ttk.Frame(self.size_frame)
         size_row.pack(fill=tk.X)
 
-        ttk.Label(size_row, text="L:", font=('Segoe UI', 9)).pack(side=tk.LEFT)
+        self.size_label_w = ttk.Label(size_row, text=t("size.label_w"), font=('Segoe UI', 9))
+        self.size_label_w.pack(side=tk.LEFT)
         self.img_width_entry = ttk.Entry(size_row, width=6)
         self.img_width_entry.pack(side=tk.LEFT, padx=(2, 10))
         self.img_width_entry.insert(0, "0")
         self.img_width_entry.bind('<Return>', self.on_size_entry)
 
-        ttk.Label(size_row, text="A:", font=('Segoe UI', 9)).pack(side=tk.LEFT)
+        self.size_label_h = ttk.Label(size_row, text=t("size.label_h"), font=('Segoe UI', 9))
+        self.size_label_h.pack(side=tk.LEFT)
         self.img_height_entry = ttk.Entry(size_row, width=6)
         self.img_height_entry.pack(side=tk.LEFT, padx=2)
         self.img_height_entry.insert(0, "0")
         self.img_height_entry.bind('<Return>', self.on_size_entry)
 
-        self.img_size_label = ttk.Label(size_frame, text="Originale: -", font=('Segoe UI', 8))
+        self.img_size_label = ttk.Label(self.size_frame, text=t("size.original_empty"), font=('Segoe UI', 8))
         self.img_size_label.pack(anchor=tk.W, pady=(1,0))
 
         # Toggle blocca proporzioni - stile moderno
         lock_frame = ttk.Frame(self.layer_controls_frame)
         lock_frame.pack(fill=tk.X, pady=(5, 3))
         self.lock_aspect_ratio = tk.BooleanVar(value=True)
-        self.lock_aspect_btn = ttk.Checkbutton(lock_frame, text="🔒 Proporzioni bloccate",
+        self.lock_aspect_btn = ttk.Checkbutton(lock_frame, text=t("size.lock"),
                                                 variable=self.lock_aspect_ratio, style="Toggle.TCheckbutton",
                                                 command=self.on_lock_toggle)
         self.lock_aspect_btn.pack(fill=tk.X)
 
         # === ADATTAMENTO LAYER ===
-        fit_frame = ttk.LabelFrame(self.layer_controls_frame, text="⬛ Adattamento", padding=5, style="Fit.TLabelframe")
+        fit_frame = ttk.LabelFrame(self.layer_controls_frame, text=t("fit.title"), padding=5, style="Fit.TLabelframe")
         fit_frame.pack(fill=tk.X, pady=(10,0))
 
         # Usa grid per allineare i 4 pulsanti uniformemente
@@ -570,29 +699,36 @@ class LiveVideoComposer:
         fit_row1.pack(fill=tk.X, pady=(0,3))
         fit_row1.columnconfigure(0, weight=1, uniform="fitbtn")
         fit_row1.columnconfigure(1, weight=1, uniform="fitbtn")
-        ttk.Button(fit_row1, text="📐 Adatta", command=self.fit_keep_aspect).grid(row=0, column=0, sticky="ew", padx=(0,2))
-        ttk.Button(fit_row1, text="⬛ Riempi", command=self.fit_contain).grid(row=0, column=1, sticky="ew", padx=(2,0))
+        self.fit_adapt_btn = ttk.Button(fit_row1, text=t("fit.adapt"), command=self.fit_keep_aspect)
+        self.fit_adapt_btn.grid(row=0, column=0, sticky="ew", padx=(0,2))
+        self.fit_fill_btn = ttk.Button(fit_row1, text=t("fit.fill"), command=self.fit_contain)
+        self.fit_fill_btn.grid(row=0, column=1, sticky="ew", padx=(2,0))
 
         fit_row2 = ttk.Frame(fit_frame)
         fit_row2.pack(fill=tk.X)
         fit_row2.columnconfigure(0, weight=1, uniform="fitbtn")
         fit_row2.columnconfigure(1, weight=1, uniform="fitbtn")
-        ttk.Button(fit_row2, text="↔ Riempi H", command=self.fit_fill_horizontal).grid(row=0, column=0, sticky="ew", padx=(0,2))
-        ttk.Button(fit_row2, text="↕ Riempi V", command=self.fit_fill_vertical).grid(row=0, column=1, sticky="ew", padx=(2,0))
+        self.fit_fill_h_btn = ttk.Button(fit_row2, text=t("fit.fill_h"), command=self.fit_fill_horizontal)
+        self.fit_fill_h_btn.grid(row=0, column=0, sticky="ew", padx=(0,2))
+        self.fit_fill_v_btn = ttk.Button(fit_row2, text=t("fit.fill_v"), command=self.fit_fill_vertical)
+        self.fit_fill_v_btn.grid(row=0, column=1, sticky="ew", padx=(2,0))
 
         # Pulsanti azione
         action_btns = ttk.Frame(self.layer_controls_frame)
         action_btns.pack(fill=tk.X, pady=(10,0))
-        ttk.Button(action_btns, text="◎ Centra", command=self.center_selected_layer).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0,2))
+        self.btn_center = ttk.Button(action_btns, text=t("btn.center"), command=self.center_selected_layer)
+        self.btn_center.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0,2))
 
         # Effetto Specchio
-        mirror_frame = ttk.LabelFrame(self.layer_controls_frame, text="⟷ Specchio", padding=5, style="Mirror.TLabelframe")
-        mirror_frame.pack(fill=tk.X, pady=(10,0))
+        self.mirror_frame = ttk.LabelFrame(self.layer_controls_frame, text=t("mirror.title"), padding=5, style="Mirror.TLabelframe")
+        self.mirror_frame.pack(fill=tk.X, pady=(10,0))
 
-        mirror_btns = ttk.Frame(mirror_frame)
+        mirror_btns = ttk.Frame(self.mirror_frame)
         mirror_btns.pack(fill=tk.X)
-        ttk.Button(mirror_btns, text="⇆ Orizzontale", command=self.flip_horizontal).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0,2))
-        ttk.Button(mirror_btns, text="⇅ Verticale", command=self.flip_vertical).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2,0))
+        self.mirror_h_btn = ttk.Button(mirror_btns, text=t("mirror.h"), command=self.flip_horizontal)
+        self.mirror_h_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0,2))
+        self.mirror_v_btn = ttk.Button(mirror_btns, text=t("mirror.v"), command=self.flip_vertical)
+        self.mirror_v_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2,0))
 
     def create_canvas_panel(self, parent):
         """Pannello centrale - Canvas"""
@@ -600,12 +736,11 @@ class LiveVideoComposer:
         canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
 
         # Info con stile moderno
-        self.file_label = ttk.Label(canvas_frame, text="⬚ Trascina qui le tue immagini",
+        self.file_label = ttk.Label(canvas_frame, text=t("canvas.drag_hint"),
                                     font=('Segoe UI', 13), style="Header.TLabel")
         self.file_label.pack(pady=(0, 5))
 
-        self.instruction_label = ttk.Label(canvas_frame,
-            text="Click = Seleziona  •  Canc = Elimina  •  Trascina = Sposta  •  Handle = Ridimensiona",
+        self.instruction_label = ttk.Label(canvas_frame, text=t("canvas.instructions"),
             font=('Segoe UI', 9), foreground=self.border_color)
         self.instruction_label.pack(pady=(0, 5))
 
@@ -621,8 +756,10 @@ class LiveVideoComposer:
         # Pulsanti con stile
         btn_frame = ttk.Frame(canvas_frame)
         btn_frame.pack(pady=10)
-        ttk.Button(btn_frame, text="⊕ Aggiungi File", command=self.add_image).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="⊗ Rimuovi Tutto", command=self.clear_all).pack(side=tk.LEFT, padx=5)
+        self.canvas_add_btn = ttk.Button(btn_frame, text=t("canvas.add_file"), command=self.add_image)
+        self.canvas_add_btn.pack(side=tk.LEFT, padx=5)
+        self.canvas_remove_btn = ttk.Button(btn_frame, text=t("canvas.remove_all"), command=self.clear_all)
+        self.canvas_remove_btn.pack(side=tk.LEFT, padx=5)
 
         self.info_label = ttk.Label(canvas_frame, text="", font=('Segoe UI', 9))
         self.info_label.pack()
@@ -634,53 +771,59 @@ class LiveVideoComposer:
         right_frame.pack_propagate(False)
 
         # === OUTPUT ===
-        output_frame = ttk.LabelFrame(right_frame, text="⬡ Dimensioni Output", padding=10)
-        output_frame.pack(fill=tk.X, pady=(0, 10))
+        self.output_frame = ttk.LabelFrame(right_frame, text=t("output.title"), padding=10)
+        self.output_frame.pack(fill=tk.X, pady=(0, 10))
 
-        ttk.Label(output_frame, text="Preset:").pack(anchor=tk.W)
-        self.preset_combo = ttk.Combobox(output_frame, values=list(RESOLUTION_PRESETS.keys()), state="readonly")
-        self.preset_combo.set("1920x1080 (Full HD 16:9)")
+        self.output_preset_label = ttk.Label(self.output_frame, text=t("output.preset"))
+        self.output_preset_label.pack(anchor=tk.W)
+        self.preset_combo = ttk.Combobox(self.output_frame, values=get_preset_values(), state="readonly")
+        self.preset_combo.set(t("preset.fullhd"))
         self.preset_combo.pack(fill=tk.X, pady=(2, 10))
         self.preset_combo.bind("<<ComboboxSelected>>", self.on_preset_change)
 
-        size_frame = ttk.Frame(output_frame)
+        size_frame = ttk.Frame(self.output_frame)
         size_frame.pack(fill=tk.X)
 
-        ttk.Label(size_frame, text="W:").grid(row=0, column=0)
+        self.output_label_w = ttk.Label(size_frame, text=t("size.label_w"))
+        self.output_label_w.grid(row=0, column=0)
         self.width_entry = ttk.Entry(size_frame, textvariable=self.output_width, width=7)
         self.width_entry.grid(row=0, column=1, padx=2)
 
-        ttk.Label(size_frame, text="H:").grid(row=0, column=2, padx=(10,0))
+        self.output_label_h = ttk.Label(size_frame, text=t("size.label_h"))
+        self.output_label_h.grid(row=0, column=2, padx=(10,0))
         self.height_entry = ttk.Entry(size_frame, textvariable=self.output_height, width=7)
         self.height_entry.grid(row=0, column=3, padx=2)
 
-        ttk.Button(output_frame, text="✓ Applica", command=self.apply_resolution).pack(pady=(10, 0))
+        self.output_apply_btn = ttk.Button(self.output_frame, text=t("output.apply"), command=self.apply_resolution)
+        self.output_apply_btn.pack(pady=(10, 0))
 
         # === SFONDO ===
-        bg_frame = ttk.LabelFrame(right_frame, text="◐ Sfondo", padding=10)
-        bg_frame.pack(fill=tk.X, pady=(0, 10))
+        self.bg_frame = ttk.LabelFrame(right_frame, text=t("bg.title"), padding=10)
+        self.bg_frame.pack(fill=tk.X, pady=(0, 10))
 
-        color_grid = ttk.Frame(bg_frame)
+        color_grid = ttk.Frame(self.bg_frame)
         color_grid.pack()
 
-        colors = [("#000000", "Nero"), ("#FFFFFF", "Bianco"), ("#808080", "Grigio"),
-                  ("#FF0000", "Rosso"), ("#00FF00", "Verde"), ("#0000FF", "Blu"),
-                  ("#FFFF00", "Giallo"), ("#FF00FF", "Magenta"), ("#00FFFF", "Ciano")]
+        colors = [("#000000", "bg.black"), ("#FFFFFF", "bg.white"), ("#808080", "bg.gray"),
+                  ("#FF0000", "bg.red"), ("#00FF00", "bg.green"), ("#0000FF", "bg.blue"),
+                  ("#FFFF00", "bg.yellow"), ("#FF00FF", "bg.magenta"), ("#00FFFF", "bg.cyan")]
 
-        for i, (color, name) in enumerate(colors):
+        for i, (color, key) in enumerate(colors):
             btn = tk.Button(color_grid, bg=color, width=3, height=1, bd=0,
                            activebackground=color, relief=tk.FLAT,
                            command=lambda c=color: self.set_bg_color(c))
             btn.grid(row=i//3, column=i%3, padx=2, pady=2)
 
-        ttk.Button(bg_frame, text="⊞ Personalizza", command=self.choose_custom_color).pack(pady=(10, 0))
+        self.bg_custom_btn = ttk.Button(self.bg_frame, text=t("bg.custom"), command=self.choose_custom_color)
+        self.bg_custom_btn.pack(pady=(10, 0))
 
         # === ESPORTAZIONE IMMAGINE ===
-        self.image_export_frame = ttk.LabelFrame(right_frame, text="◳ Esporta Immagine", padding=12)
+        self.image_export_frame = ttk.LabelFrame(right_frame, text=t("export_img.title"), padding=12)
         self.image_export_frame.pack(fill=tk.X, pady=(0, 8))
 
         # Formati in una riga ordinata
-        ttk.Label(self.image_export_frame, text="Formato:", font=('Segoe UI', 9)).pack(anchor=tk.W)
+        self.export_img_format_label = ttk.Label(self.image_export_frame, text=t("export_img.format"), font=('Segoe UI', 9))
+        self.export_img_format_label.pack(anchor=tk.W)
         self.output_format = tk.StringVar(value="png")
         img_fmt_frame = ttk.Frame(self.image_export_frame)
         img_fmt_frame.pack(fill=tk.X, pady=(2, 8))
@@ -691,32 +834,37 @@ class LiveVideoComposer:
         # Preset Qualità (Bassa, Media, Alta)
         qual_preset_frame = ttk.Frame(self.image_export_frame)
         qual_preset_frame.pack(fill=tk.X, pady=(0, 5))
-        ttk.Label(qual_preset_frame, text="Qualità:", font=('Segoe UI', 9)).pack(side=tk.LEFT)
+        self.export_img_quality_label = ttk.Label(qual_preset_frame, text=t("export_img.quality"), font=('Segoe UI', 9))
+        self.export_img_quality_label.pack(side=tk.LEFT)
 
         self.quality_preset = tk.StringVar(value="media")
-        ttk.Radiobutton(qual_preset_frame, text="Bassa", variable=self.quality_preset,
-                       value="bassa", command=self.on_quality_preset_change).pack(side=tk.LEFT, padx=3)
-        ttk.Radiobutton(qual_preset_frame, text="Media", variable=self.quality_preset,
-                       value="media", command=self.on_quality_preset_change).pack(side=tk.LEFT, padx=3)
-        ttk.Radiobutton(qual_preset_frame, text="Alta", variable=self.quality_preset,
-                       value="alta", command=self.on_quality_preset_change).pack(side=tk.LEFT, padx=3)
+        self.qual_low_rb = ttk.Radiobutton(qual_preset_frame, text=t("export_img.low"), variable=self.quality_preset,
+                       value="bassa", command=self.on_quality_preset_change)
+        self.qual_low_rb.pack(side=tk.LEFT, padx=3)
+        self.qual_med_rb = ttk.Radiobutton(qual_preset_frame, text=t("export_img.medium"), variable=self.quality_preset,
+                       value="media", command=self.on_quality_preset_change)
+        self.qual_med_rb.pack(side=tk.LEFT, padx=3)
+        self.qual_high_rb = ttk.Radiobutton(qual_preset_frame, text=t("export_img.high"), variable=self.quality_preset,
+                       value="alta", command=self.on_quality_preset_change)
+        self.qual_high_rb.pack(side=tk.LEFT, padx=3)
 
         # Info qualità (DPI, bit depth)
         self.quality_info_label = ttk.Label(self.image_export_frame,
-                                            text="DPI: 150 | Bit: 16 | Compressione: 15%",
+                                            text=t("export_img.dpi", 150, 16, 15),
                                             font=('Segoe UI', 8))
         self.quality_info_label.pack(anchor=tk.W, pady=(0, 8))
 
-        self.img_export_btn = ttk.Button(self.image_export_frame, text="▶ ESPORTA IMMAGINE",
+        self.img_export_btn = ttk.Button(self.image_export_frame, text=t("export_img.btn"),
                                          style="Green.TButton", command=self.export_image)
         self.img_export_btn.pack(fill=tk.X, ipady=4)
 
         # === ESPORTAZIONE VIDEO ===
-        self.video_export_frame = ttk.LabelFrame(right_frame, text="▷ Esporta Video", padding=12)
+        self.video_export_frame = ttk.LabelFrame(right_frame, text=t("export_vid.title"), padding=12)
         self.video_export_frame.pack(fill=tk.X, pady=(0, 8))
 
         # Formati video
-        ttk.Label(self.video_export_frame, text="Formato:", font=('Segoe UI', 9)).pack(anchor=tk.W)
+        self.export_vid_format_label = ttk.Label(self.video_export_frame, text=t("export_vid.format"), font=('Segoe UI', 9))
+        self.export_vid_format_label.pack(anchor=tk.W)
         self.video_format = tk.StringVar(value="mp4")
         vid_fmt_frame = ttk.Frame(self.video_export_frame)
         vid_fmt_frame.pack(fill=tk.X, pady=(2, 8))
@@ -727,7 +875,8 @@ class LiveVideoComposer:
         # FPS
         fps_frame = ttk.Frame(self.video_export_frame)
         fps_frame.pack(fill=tk.X, pady=(0, 5))
-        ttk.Label(fps_frame, text="FPS:", font=('Segoe UI', 9)).pack(side=tk.LEFT)
+        self.export_vid_fps_label = ttk.Label(fps_frame, text=t("export_vid.fps"), font=('Segoe UI', 9))
+        self.export_vid_fps_label.pack(side=tk.LEFT)
         self.fps_var = tk.IntVar(value=30)
         fps_entry = ttk.Entry(fps_frame, textvariable=self.fps_var, width=4)
         fps_entry.pack(side=tk.LEFT, padx=(2, 15))
@@ -735,25 +884,29 @@ class LiveVideoComposer:
         # Preset Qualità Video (Bassa, Media, Alta)
         vid_qual_preset_frame = ttk.Frame(self.video_export_frame)
         vid_qual_preset_frame.pack(fill=tk.X, pady=(0, 5))
-        ttk.Label(vid_qual_preset_frame, text="Qualità:", font=('Segoe UI', 9)).pack(side=tk.LEFT)
+        self.export_vid_quality_label = ttk.Label(vid_qual_preset_frame, text=t("export_vid.quality"), font=('Segoe UI', 9))
+        self.export_vid_quality_label.pack(side=tk.LEFT)
 
         self.vid_quality_preset = tk.StringVar(value="media")
-        ttk.Radiobutton(vid_qual_preset_frame, text="Bassa", variable=self.vid_quality_preset,
-                       value="bassa", command=self.on_vid_quality_preset_change).pack(side=tk.LEFT, padx=3)
-        ttk.Radiobutton(vid_qual_preset_frame, text="Media", variable=self.vid_quality_preset,
-                       value="media", command=self.on_vid_quality_preset_change).pack(side=tk.LEFT, padx=3)
-        ttk.Radiobutton(vid_qual_preset_frame, text="Alta", variable=self.vid_quality_preset,
-                       value="alta", command=self.on_vid_quality_preset_change).pack(side=tk.LEFT, padx=3)
+        self.vid_qual_low_rb = ttk.Radiobutton(vid_qual_preset_frame, text=t("export_img.low"), variable=self.vid_quality_preset,
+                       value="bassa", command=self.on_vid_quality_preset_change)
+        self.vid_qual_low_rb.pack(side=tk.LEFT, padx=3)
+        self.vid_qual_med_rb = ttk.Radiobutton(vid_qual_preset_frame, text=t("export_img.medium"), variable=self.vid_quality_preset,
+                       value="media", command=self.on_vid_quality_preset_change)
+        self.vid_qual_med_rb.pack(side=tk.LEFT, padx=3)
+        self.vid_qual_high_rb = ttk.Radiobutton(vid_qual_preset_frame, text=t("export_img.high"), variable=self.vid_quality_preset,
+                       value="alta", command=self.on_vid_quality_preset_change)
+        self.vid_qual_high_rb.pack(side=tk.LEFT, padx=3)
 
         # Info qualità video
         self.vid_quality = tk.IntVar(value=75)
         self.vid_bitrate = tk.IntVar(value=5000)  # kbps
         self.vid_quality_info_label = ttk.Label(self.video_export_frame,
-                                                text="Bitrate: 5000 kbps | CRF: 23",
+                                                text=t("export_vid.bitrate", 5000, 23),
                                                 font=('Segoe UI', 8))
         self.vid_quality_info_label.pack(anchor=tk.W, pady=(0, 8))
 
-        self.vid_export_btn = ttk.Button(self.video_export_frame, text="▶ ESPORTA VIDEO",
+        self.vid_export_btn = ttk.Button(self.video_export_frame, text=t("export_vid.btn"),
                                          style="Blue.TButton", command=self.export_video)
         self.vid_export_btn.pack(fill=tk.X, ipady=4)
 
@@ -762,7 +915,7 @@ class LiveVideoComposer:
         self.progress.pack(fill=tk.X, pady=(5, 2))
 
         # Pulsante Annulla export (visibile solo durante export)
-        self.cancel_btn = ttk.Button(right_frame, text="⊗ Annulla Export",
+        self.cancel_btn = ttk.Button(right_frame, text=t("cancel_export"),
                                      command=self.cancel_export)
         self.cancel_btn.pack(fill=tk.X, pady=(0, 8))
         self.cancel_btn.pack_forget()  # Nascosto di default
@@ -789,9 +942,9 @@ class LiveVideoComposer:
         # Icona e testo
         self.canvas.create_text(w//2, h//2 - 30, text="▢",
                                fill=self.accent_color, font=('Segoe UI', 52))
-        self.canvas.create_text(w//2, h//2 + 30, text="Trascina qui immagini o video",
+        self.canvas.create_text(w//2, h//2 + 30, text=t("canvas.empty_text"),
                                fill=self.fg_color, font=('Segoe UI', 13))
-        self.canvas.create_text(w//2, h//2 + 55, text="oppure clicca 'Aggiungi File'",
+        self.canvas.create_text(w//2, h//2 + 55, text=t("canvas.empty_sub"),
                                fill=self.fg_secondary, font=('Segoe UI', 10))
 
     def setup_bindings(self):
@@ -873,23 +1026,19 @@ class LiveVideoComposer:
                 if ext in VIDEO_FORMATS:
                     if file_size > MAX_VIDEO_SIZE:
                         logger.warning(f"File video molto grande ({file_size / 1024**3:.1f} GB): {filepath}")
-                        messagebox.showwarning("File grande",
-                            f"Il video e' molto grande ({file_size / 1024**3:.1f} GB).\n"
-                            "L'export potrebbe richiedere molto tempo.")
+                        messagebox.showwarning(t("dialog.file_large_title"),
+                            t("dialog.file_large_video", f"{file_size / 1024**3:.1f}"))
                     self.load_video(filepath)
                 elif ext in IMAGE_FORMATS:
                     if file_size > MAX_IMAGE_SIZE:
                         logger.warning(f"Immagine molto grande ({file_size / 1024**2:.0f} MB): {filepath}")
-                        messagebox.showwarning("File grande",
-                            f"L'immagine e' molto grande ({file_size / 1024**2:.0f} MB).\n"
-                            "Verra' creata una working copy ridotta per la preview.")
+                        messagebox.showwarning(t("dialog.file_large_title"),
+                            t("dialog.file_large_image", f"{file_size / 1024**2:.0f}"))
                     self.load_image(filepath)
                 else:
                     logger.info(f"Formato non supportato nel drop: {ext}")
-                    messagebox.showwarning("Formato non supportato",
-                        f"Il file '{Path(filepath).name}' non e' un formato supportato.\n"
-                        f"Immagini: {', '.join(sorted(IMAGE_FORMATS))}\n"
-                        f"Video: {', '.join(sorted(VIDEO_FORMATS))}")
+                    messagebox.showwarning(t("dialog.unsupported_title"),
+                        t("dialog.unsupported", Path(filepath).name, ', '.join(sorted(IMAGE_FORMATS)), ', '.join(sorted(VIDEO_FORMATS))))
             except Exception as e:
                 logger.error(f"Errore elaborazione file droppato: {e}")
 
@@ -953,10 +1102,10 @@ class LiveVideoComposer:
                                text=f"{output_w} x {output_h}",
                                fill=self.fg_secondary, font=('Segoe UI', 14, 'bold'))
         self.canvas.create_text(canvas_x + preview_w//2, canvas_y + preview_h//2 + 15,
-                               text="Aggiungi immagini per iniziare",
+                               text=t("canvas.add_images"),
                                fill=self.border_color, font=('Segoe UI', 10))
 
-        self.info_label.config(text=f"Output: {output_w}x{output_h}")
+        self.info_label.config(text=t("canvas.output", output_w, output_h))
 
     def on_quality_preset_change(self):
         """Gestisce il cambio del preset qualità"""
@@ -966,24 +1115,24 @@ class LiveVideoComposer:
             self.export_dpi.set(72)
             self.export_bit_depth.set(8)
             self.img_quality.set(60)
-            self.quality_info_label.config(text="DPI: 72 | Bit: 8 | Compressione: 40%")
+            self.quality_info_label.config(text=t("export_img.dpi", 72, 8, 40))
         elif preset == "media":
             self.export_dpi.set(150)
             self.export_bit_depth.set(16)
             self.img_quality.set(85)
-            self.quality_info_label.config(text="DPI: 150 | Bit: 16 | Compressione: 15%")
+            self.quality_info_label.config(text=t("export_img.dpi", 150, 16, 15))
         else:  # alta
             self.export_dpi.set(300)
             self.export_bit_depth.set(24)
             self.img_quality.set(100)
-            self.quality_info_label.config(text="DPI: 300 | Bit: 24 | Compressione: 0%")
+            self.quality_info_label.config(text=t("export_img.dpi", 300, 24, 0))
 
     def on_lock_toggle(self):
         """Aggiorna l'icona del toggle quando cambia stato"""
         if self.lock_aspect_ratio.get():
-            self.lock_aspect_btn.config(text="🔒 Proporzioni bloccate")
+            self.lock_aspect_btn.config(text=t("size.lock"))
         else:
-            self.lock_aspect_btn.config(text="🔓 Proporzioni libere")
+            self.lock_aspect_btn.config(text=t("size.unlock"))
 
     def on_size_entry(self, event=None):
         """Gestisce il cambio delle dimensioni dell'immagine in pixel"""
@@ -1040,12 +1189,12 @@ class LiveVideoComposer:
             self.img_width_entry.insert(0, "0")
             self.img_height_entry.delete(0, tk.END)
             self.img_height_entry.insert(0, "0")
-            self.img_size_label.config(text="Originale: -")
+            self.img_size_label.config(text=t("size.original_empty"))
             return
 
         # Dimensioni originali
         orig_w, orig_h = self.selected_layer.original_image.size
-        self.img_size_label.config(text=f"Originale: {orig_w} x {orig_h}")
+        self.img_size_label.config(text=t("size.original", f"{orig_w} x {orig_h}"))
 
         # Dimensioni attuali (con zoom)
         zoom = self.selected_layer.zoom / 100.0
@@ -1062,13 +1211,13 @@ class LiveVideoComposer:
     def add_image(self):
         """Aggiunge una nuova immagine o video al collage"""
         filetypes = [
-            ("Immagini e Video", "*.jpg *.jpeg *.png *.bmp *.gif *.webp *.tiff *.mp4 *.avi *.mov *.mkv *.wmv *.webm"),
-            ("Immagini", "*.jpg *.jpeg *.png *.bmp *.gif *.webp *.tiff"),
-            ("Video", "*.mp4 *.avi *.mov *.mkv *.wmv *.webm"),
-            ("Tutti i file", "*.*")
+            (t("filetypes.images_video"), "*.jpg *.jpeg *.png *.bmp *.gif *.webp *.tiff *.mp4 *.avi *.mov *.mkv *.wmv *.webm"),
+            (t("filetypes.images"), "*.jpg *.jpeg *.png *.bmp *.gif *.webp *.tiff"),
+            (t("filetypes.video"), "*.mp4 *.avi *.mov *.mkv *.wmv *.webm"),
+            (t("filetypes.all"), "*.*")
         ]
 
-        filepaths = filedialog.askopenfilenames(title="Seleziona immagini o video", filetypes=filetypes)
+        filepaths = filedialog.askopenfilenames(title=t("dialog.select_files"), filetypes=filetypes)
 
         for filepath in filepaths:
             ext = Path(filepath).suffix.lower()
@@ -1144,7 +1293,7 @@ class LiveVideoComposer:
             self.layers_listbox.selection_set(len(self.layers) - 1)
             self.update_layer_controls()
 
-            self.file_label.config(text=f"📚 {len(self.layers)} elementi nel collage")
+            self.file_label.config(text=t("canvas.elements", len(self.layers)))
             self.update_export_panels()
             self.redraw_canvas()
 
@@ -1153,14 +1302,14 @@ class LiveVideoComposer:
         except Exception as e:
             err_msg = str(e)
             if "cannot identify image file" in err_msg.lower() or "UnidentifiedImageError" in type(e).__name__:
-                err_msg = "Formato immagine non riconosciuto o file corrotto."
+                err_msg = t("dialog.image_format_error")
             logger.error(f"Errore caricamento immagine {filepath}: {e}")
-            messagebox.showerror("Errore", f"Impossibile caricare:\n{Path(filepath).name}\n{err_msg}")
+            messagebox.showerror(t("dialog.error"), t("dialog.load_error", Path(filepath).name, err_msg))
 
     def load_video(self, filepath):
         """Carica un video - salva il percorso e usa il primo frame come anteprima"""
         if not VIDEO_SUPPORT:
-            messagebox.showerror("Errore", "OpenCV non installato. Installa con: pip install opencv-python-headless")
+            messagebox.showerror(t("dialog.error"), t("dialog.opencv_missing"))
             return
 
         cap = None
@@ -1224,7 +1373,7 @@ class LiveVideoComposer:
             self.layers_listbox.selection_set(len(self.layers) - 1)
             self.update_layer_controls()
 
-            self.file_label.config(text=f"📚 {len(self.layers)} elementi | Video: {duration:.1f}s @ {fps:.0f}fps")
+            self.file_label.config(text=t("canvas.elements_video", len(self.layers), f"{duration:.1f}", f"{fps:.0f}"))
             self.update_export_panels()
             self.redraw_canvas()
 
@@ -1232,7 +1381,7 @@ class LiveVideoComposer:
 
         except Exception as e:
             logger.error(f"Errore caricamento video {filepath}: {e}")
-            messagebox.showerror("Errore", f"Impossibile caricare video:\n{filepath}\n{str(e)}")
+            messagebox.showerror(t("dialog.error"), t("dialog.video_load_error", filepath, str(e)))
         finally:
             if cap is not None:
                 cap.release()
@@ -1291,7 +1440,7 @@ class LiveVideoComposer:
             self.update_layers_list()
             self.update_layer_controls()
             self.update_export_panels()
-            self.file_label.config(text=f"📚 {len(self.layers)} elementi nel collage" if self.layers else "📁 Aggiungi immagini")
+            self.file_label.config(text=t("canvas.elements", len(self.layers)) if self.layers else t("canvas.add_images_short"))
             self.redraw_canvas()
 
     def move_layer_up(self):
@@ -1318,7 +1467,7 @@ class LiveVideoComposer:
         """Duplica il layer selezionato"""
         if self.selected_layer:
             new_layer = ImageLayer(self.selected_layer.original_image.copy(),
-                                   f"{self.selected_layer.name}_copia")
+                                   f"{self.selected_layer.name}{t('layer.copy_suffix')}")
             new_layer.zoom = self.selected_layer.zoom
             new_layer.rotation = self.selected_layer.rotation
             new_layer.offset_x = self.selected_layer.offset_x + 50
@@ -1709,7 +1858,7 @@ class LiveVideoComposer:
         if self.selected_layer and self.selected_layer.bounds_in_canvas:
             self.draw_selection_handles(self.selected_layer)
 
-        self.info_label.config(text=f"Output: {output_w}x{output_h} | Layers: {len(self.layers)}")
+        self.info_label.config(text=t("canvas.output_layers", output_w, output_h, len(self.layers)))
 
     def draw_selection_handles(self, layer):
         """Disegna gli handle di selezione per un layer (tag handles per riuso canvas)"""
@@ -1959,7 +2108,8 @@ class LiveVideoComposer:
 
     def on_preset_change(self, event=None):
         preset = self.preset_combo.get()
-        resolution = RESOLUTION_PRESETS.get(preset)
+        pid = preset_display_to_id(preset)
+        resolution = preset_id_to_resolution(pid)
         if resolution:
             self.output_width.set(resolution[0])
             self.output_height.set(resolution[1])
@@ -1971,10 +2121,10 @@ class LiveVideoComposer:
             h = int(self.output_height.get())
             if w < 1 or h < 1:
                 raise ValueError("Dimensioni non valide")
-            self.preset_combo.set("Personalizzato")
+            self.preset_combo.set(t("preset.custom"))
             self.redraw_canvas()
         except (ValueError, tk.TclError):
-            messagebox.showerror("Errore", "Valori non validi")
+            messagebox.showerror(t("dialog.error"), t("dialog.invalid_values"))
 
     def set_bg_color(self, color):
         self.bg_color_var.set(color)
@@ -1982,7 +2132,7 @@ class LiveVideoComposer:
 
     def choose_custom_color(self):
         from tkinter import colorchooser
-        color = colorchooser.askcolor(title="Scegli colore sfondo")
+        color = colorchooser.askcolor(title=t("dialog.choose_color"))
         if color[1]:
             self.set_bg_color(color[1])
 
@@ -1996,15 +2146,15 @@ class LiveVideoComposer:
         if preset == "bassa":
             self.vid_quality.set(50)
             self.vid_bitrate.set(2000)
-            info_text = "Bitrate: 2000 kbps | CRF: 28"
+            info_text = t("export_vid.bitrate", 2000, 28)
         elif preset == "media":
             self.vid_quality.set(75)
             self.vid_bitrate.set(5000)
-            info_text = "Bitrate: 5000 kbps | CRF: 23"
+            info_text = t("export_vid.bitrate", 5000, 23)
         else:  # alta
             self.vid_quality.set(100)
             self.vid_bitrate.set(8000)
-            info_text = "Bitrate: 8000 kbps | CRF: 18"
+            info_text = t("export_vid.bitrate", 8000, 18)
         self.vid_quality_info_label.config(text=info_text)
 
     def set_video_export_enabled(self, enabled):
@@ -2014,9 +2164,9 @@ class LiveVideoComposer:
             self._set_widget_state(child, state)
         # Cambia colore del frame
         if enabled:
-            self.video_export_frame.config(text="🎬 Esporta Video")
+            self.video_export_frame.config(text=t("export_vid.title"))
         else:
-            self.video_export_frame.config(text="🎬 Esporta Video (nessun video)")
+            self.video_export_frame.config(text=t("export_vid.title_disabled"))
 
     def set_image_export_enabled(self, enabled):
         """Abilita/disabilita il box esportazione immagine"""
@@ -2024,9 +2174,9 @@ class LiveVideoComposer:
         for child in self.image_export_frame.winfo_children():
             self._set_widget_state(child, state)
         if enabled:
-            self.image_export_frame.config(text="🖼️ Esporta Immagine")
+            self.image_export_frame.config(text=t("export_img.title"))
         else:
-            self.image_export_frame.config(text="🖼️ Esporta Immagine (nessuna immagine)")
+            self.image_export_frame.config(text=t("export_img.title_disabled"))
 
     def _set_widget_state(self, widget, state):
         """Imposta ricorsivamente lo stato di un widget e i suoi figli"""
@@ -2056,14 +2206,14 @@ class LiveVideoComposer:
     def clear_all(self):
         """Rimuove tutti i layer e libera risorse"""
         if self.layers:
-            if messagebox.askyesno("Conferma", "Rimuovere tutti gli elementi?"):
+            if messagebox.askyesno(t("dialog.confirm"), t("dialog.confirm_clear")):
                 for layer in self.layers:
                     layer.cleanup()
                 self.layers.clear()
                 self.selected_layer = None
                 self.update_layers_list()
                 self.update_export_panels()
-                self.file_label.config(text="📁 Aggiungi immagini per creare un collage")
+                self.file_label.config(text=t("canvas.add_images_full"))
                 self.redraw_canvas()
 
     def on_closing(self):
@@ -2113,19 +2263,19 @@ class LiveVideoComposer:
         self._export_cancelled.set()
         logger.info("Export annullato dall'utente")
         self.root.after(0, self._stop_export)
-        self.root.after(0, lambda: self.info_label.config(text="Export annullato"))
+        self.root.after(0, lambda: self.info_label.config(text=t("export_cancelled")))
 
     def export_image(self):
         """Esporta come immagine"""
         if not self.layers:
-            messagebox.showwarning("Avviso", "Aggiungi almeno un'immagine")
+            messagebox.showwarning(t("dialog.warning"), t("dialog.add_one_image"))
             return
 
         fmt = self.output_format.get()
         ext = f".{fmt}"
 
         filepath = filedialog.asksaveasfilename(
-            title="Salva collage",
+            title=t("dialog.save_collage"),
             defaultextension=ext,
             initialfile=f"collage{ext}",
             filetypes=[(fmt.upper(), f"*{ext}")]
@@ -2141,20 +2291,20 @@ class LiveVideoComposer:
     def export_video(self):
         """Esporta come video"""
         if not VIDEO_SUPPORT:
-            messagebox.showerror("Errore", "OpenCV non installato. Installa con: pip install opencv-python-headless")
+            messagebox.showerror(t("dialog.error"), t("dialog.opencv_missing"))
             return
 
         # Trova video nei layer
         video_layers = [layer for layer in self.layers if hasattr(layer, 'is_video') and layer.is_video]
         if not video_layers:
-            messagebox.showwarning("Avviso", "Nessun video caricato. Per esportare video carica almeno un file video.")
+            messagebox.showwarning(t("dialog.warning"), t("dialog.no_video"))
             return
 
         fmt = self.video_format.get()
         ext = f".{fmt}"
 
         filepath = filedialog.asksaveasfilename(
-            title="Salva video",
+            title=t("dialog.save_video"),
             defaultextension=ext,
             initialfile=f"video_output{ext}",
             filetypes=[(fmt.upper(), f"*{ext}")]
@@ -2220,11 +2370,11 @@ class LiveVideoComposer:
             logger.info(f"Export completato: {file_size / 1024:.1f} KB")
 
             self.root.after(0, self._stop_export)
-            self.root.after(0, lambda: messagebox.showinfo("Successo", f"Collage salvato:\n{filepath}"))
+            self.root.after(0, lambda: messagebox.showinfo(t("dialog.success"), t("dialog.collage_saved", filepath)))
         except Exception as ex:
             logger.error(f"Errore export immagine: {ex}")
             self.root.after(0, self._stop_export)
-            self.root.after(0, lambda err=str(ex): messagebox.showerror("Errore", err))
+            self.root.after(0, lambda err=str(ex): messagebox.showerror(t("dialog.error"), err))
         finally:
             # Ripristina sempre le working copy per la preview
             for layer in self.layers:
@@ -2296,7 +2446,7 @@ class LiveVideoComposer:
                     if frame_count % 10 == 0:
                         progress_pct = int((frame_count / max(total_frames, 1)) * 100)
                         self.root.after(0, lambda p=progress_pct:
-                                       self.info_label.config(text=f"Esportazione GIF: {p}%"))
+                                       self.info_label.config(text=t("export_gif_progress", p)))
 
                 cap.release()
                 cap = None
@@ -2306,7 +2456,7 @@ class LiveVideoComposer:
                     gc.collect()
                     logger.info("Export GIF annullato")
                     self.root.after(0, self._stop_export)
-                    self.root.after(0, lambda: self.info_label.config(text="Export annullato"))
+                    self.root.after(0, lambda: self.info_label.config(text=t("export_cancelled")))
                     return
 
                 if frames:
@@ -2319,7 +2469,7 @@ class LiveVideoComposer:
                 logger.info(f"GIF esportata: {frame_count} frames")
                 self.root.after(0, self._stop_export)
                 self.root.after(0, lambda: self.info_label.config(text=""))
-                self.root.after(0, lambda: messagebox.showinfo("Successo", f"GIF salvata:\n{filepath}\n{frame_count} frames"))
+                self.root.after(0, lambda: messagebox.showinfo(t("dialog.success"), t("dialog.gif_saved", filepath, frame_count)))
                 return
             else:
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -2354,23 +2504,23 @@ class LiveVideoComposer:
                 if frame_count % 30 == 0:
                     progress_pct = int((frame_count / max(total_frames, 1)) * 100)
                     self.root.after(0, lambda p=progress_pct:
-                                   self.info_label.config(text=f"Esportazione video: {p}%"))
+                                   self.info_label.config(text=t("export_video_progress", p)))
 
             if self._export_cancelled.is_set():
                 logger.info(f"Export video annullato dopo {frame_count} frames")
                 self.root.after(0, self._stop_export)
-                self.root.after(0, lambda: self.info_label.config(text="Export annullato"))
+                self.root.after(0, lambda: self.info_label.config(text=t("export_cancelled")))
             else:
                 logger.info(f"Video esportato: {frame_count} frames")
                 self.root.after(0, self._stop_export)
                 self.root.after(0, lambda: self.info_label.config(text=""))
-                self.root.after(0, lambda: messagebox.showinfo("Successo", f"Video salvato:\n{filepath}\n{frame_count} frames"))
+                self.root.after(0, lambda: messagebox.showinfo(t("dialog.success"), t("dialog.video_saved", filepath, frame_count)))
 
         except Exception as ex:
             logger.error(f"Errore export video: {ex}")
             self.root.after(0, self._stop_export)
             self.root.after(0, lambda: self.info_label.config(text=""))
-            self.root.after(0, lambda err=str(ex): messagebox.showerror("Errore", err))
+            self.root.after(0, lambda err=str(ex): messagebox.showerror(t("dialog.error"), err))
         finally:
             if cap is not None:
                 cap.release()
@@ -2423,6 +2573,7 @@ class LiveVideoComposer:
 
 
 def main():
+    init_language()
     root = tk.Tk()
     _app = LiveVideoComposer(root)  # noqa: F841
 

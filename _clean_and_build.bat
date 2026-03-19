@@ -21,7 +21,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
-echo --- Genera icon.ico da logo (se mancante) ---
+echo --- Genera icon.ico e grafiche wizard (se mancanti) ---
 if not exist "icon.ico" (
     python scripts\create-icon.py
     if %ERRORLEVEL% neq 0 (
@@ -31,6 +31,16 @@ if not exist "icon.ico" (
     )
 ) else (
     echo [OK] icon.ico presente
+)
+if not exist "installer-wizard.bmp" (
+    python scripts\create-installer-wizard.py
+    if %ERRORLEVEL% neq 0 (
+        echo [ERRORE] Creazione grafiche wizard fallita
+        pause
+        exit /b 1
+    )
+) else (
+    echo [OK] installer-wizard.bmp presente
 )
 
 echo.

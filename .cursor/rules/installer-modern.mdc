@@ -1,0 +1,33 @@
+---
+description: Installer Inno Setup — stile moderno broadcast, dark wizard
+globs: installer.iss, scripts/create-installer-wizard.py
+alwaysApply: false
+---
+
+# Installer Inno Setup — Stile Moderno Broadcast
+
+## Principio
+
+L'installer deve trasmettere **modernità e tecnologia** coerente con il target (spettacoli live, video, broadcast). Stile visivo: dark, professionale.
+
+## Configurazione installer.iss
+
+- **WizardStyle**: `modern,dark` — tema scuro
+- **WizardImageFile**: `installer-wizard.bmp` (164×314) — pannello sinistro Welcome/Finish
+- **WizardSmallImageFile**: `installer-wizard-small.bmp` (55×58) — angolo alto destra
+
+## Generazione grafiche
+
+```bash
+python scripts/create-installer-wizard.py
+```
+
+Output in root:
+- `installer-wizard.bmp`
+- `installer-wizard-small.bmp`
+
+Sfondo: `#0f172a` (slate-900). Logo da `icons/icona Live Video Composer.jpg`.
+
+## Build
+
+`_clean_and_build.bat` genera automaticamente le BMP se mancanti prima della compilazione Inno Setup.

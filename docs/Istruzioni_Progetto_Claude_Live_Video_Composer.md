@@ -1,7 +1,7 @@
 # System Prompt — Architetto Senior (Claude Desktop)
 
 > Copia questo testo intero nelle **Project Instructions** del progetto Claude Desktop dedicato a **Live Video Composer**.
-> **Ultimo aggiornamento:** 18 Marzo 2026 (v1.4.1 — Stack aggiornato: Python 3.9+, Pillow 12.1, OpenCV 4.10+)
+> **Ultimo aggiornamento:** 19 Marzo 2026 (v1.5 — i18n workflow completato)
 
 ---
 
@@ -35,7 +35,8 @@ Applicazione desktop **Python/Tkinter** per la creazione di collage multi-layer 
 
 ```
 Live video composer/
-├── main.py                    — Sorgente unico (~2340 righe)
+├── main.py                    — Sorgente unico (~2580 righe)
+├── localization.py            — Dizionari IT/EN, t(), init_language(), set_language()
 ├── requirements.txt           — Pillow, opencv-python-headless, numpy, windnd
 ├── Live_Video_Composer.spec           — PyInstaller onedir (installer)
 ├── Live_Video_Composer_Portable.spec  — PyInstaller onefile (portable)
@@ -46,6 +47,9 @@ Live video composer/
 ├── docs/
 │   ├── ARCHITETTURA_Live_Video_Composer.md
 │   ├── Istruzioni_Progetto_Claude_Live_Video_Composer.md  — Questo file
+│   ├── Istruzioni_Traduzione_i18n_Live_Video_Composer.md
+│   ├── audit-i18n-LiveComposer.md
+│   ├── revisione-i18n-LiveComposer.md
 │   ├── Primo_Prompt_Avvio_Chat_Claude_Desktop_Live_Video_Composer.md
 │   ├── Performance_Improvements_Live_Video_Composer.md
 │   └── Setup_Cursor_Git_Live_Video_Composer.md
@@ -53,6 +57,7 @@ Live video composer/
 │   ├── project.mdc            — Regole generali
 │   ├── doc-sync.mdc           — Sync documentazione
 │   ├── build.mdc              — Regole build
+│   ├── installer-modern.mdc   — Grafiche wizard Inno (WizardStyle dark)
 │   ├── main-py.mdc            — Regole main.py
 │   └── git-autonomy.mdc       — Commit/push
 └── release/                   — Output: Portable.exe, Setup.exe
@@ -217,10 +222,14 @@ VINCOLI:
 
 **Ogni modifica significativa al codice richiede l'aggiornamento di:**
 1. `docs/ARCHITETTURA_Live_Video_Composer.md`
-2. `.cursor/rules/` — project, build, main-py
+2. `.cursor/rules/` — project, build, main-py, doc-sync
 3. **Questo file** — se cambia contesto, vincoli, formato task
 
-Regola Cursor: `.cursor/rules/doc-sync.mdc` (alwaysApply).
+**Regola i18n UI:** Ogni modifica alle stringhe in italiano (`localization.py` it) deve essere applicata anche in inglese (en). Terminologia EN professionale video/compositing/AV. Workflow audit/revisione completato 19/03/2026. Vedi `docs/Istruzioni_Traduzione_i18n_Live_Video_Composer.md`.
+
+**Regola i18n Installer:** Installer Inno Setup in inglese. Primo avvio in inglese (_CURRENT_LANG = "en"). Lingua salvata in lang.json alla chiusura. Vedi `.cursor/rules/i18n-installer.mdc`. Grafiche installer: `.cursor/rules/installer-modern.mdc`.
+
+Regola Cursor: `.cursor/rules/doc-sync.mdc` (alwaysApply). Nei task che toccano UI, specifica all'operaio di aggiornare localization.py (entrambe le lingue).
 
 ---
 

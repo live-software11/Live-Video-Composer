@@ -109,11 +109,14 @@ Live video composer/
 ├── requirements.txt
 ├── Live_Video_Composer.spec           — PyInstaller onedir (installer)
 ├── Live_Video_Composer_Portable.spec  — PyInstaller onefile (portable)
-├── installer.iss              — Inno Setup (v1.4.1)
+├── installer.iss              — Inno Setup (v1.4.1, WizardStyle=modern,dark)
 ├── icon.ico                   — Icona applicazione
 ├── icons/                     — Icona sorgente (per scripts/create-icon.py)
+├── installer-wizard.bmp       — Grafica wizard Inno (164×314, stile broadcast)
+├── installer-wizard-small.bmp — Grafica wizard Inno (55×58)
 ├── scripts/
-│   └── create-icon.py         — Genera icon.ico da logo
+│   ├── create-icon.py         — Genera icon.ico da logo
+│   └── create-installer-wizard.py — Genera BMP wizard (stile dark)
 ├── _clean_and_build.bat       — Build completa
 ├── _build_setup.bat           — Solo setup (richiede dist/)
 ├── clean-and-build.bat        — Alias
@@ -326,6 +329,7 @@ export_video() → _start_export() → Thread: _do_export_video()
 7. **Division-by-zero** — max(1, output_w/h), max(1, fps), max(1, img_w/h)
 8. **python -m PyInstaller** — Non pyinstaller diretto
 9. **opencv-python-headless** — Preferire a opencv-python
+10. **i18n** — Ogni stringa UI aggiunta in `localization.py` sia in `it` che in `en`. Terminologia EN professionale video/AV. Primo avvio in inglese (`_CURRENT_LANG = "en"`). Lingua salvata alla chiusura. Installer Inno Setup in inglese. Vedi `docs/Istruzioni_Traduzione_i18n_Live_Video_Composer.md`.
 
 ---
 

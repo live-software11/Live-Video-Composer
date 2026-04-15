@@ -3,6 +3,8 @@ Live Video Composer - Convertitore di Immagini e Video con supporto Multi-Layer 
 Un'applicazione per adattare immagini e video a diverse risoluzioni e creare collage.
 """
 
+from __future__ import annotations
+
 import sys
 
 if sys.version_info < (3, 10):
@@ -95,40 +97,45 @@ class ImageLayer:
                  'video_fps', 'video_frames', 'bounds_in_canvas', '_cache', '_cache_key',
                  '_zoom_cache', '_zoom_cache_key', '_original_path']
 
-    def __init__(self, image, name=None):
-        self.id = str(uuid.uuid4())[:8]
-        self.original_image = image
-        self.name = name if name is not None else t("layer.default_name")
+    def __init__(self, image: Image.Image | None, name: str | None = None) -> None:
+        self.id: str = str(uuid.uuid4())[:8]
+        self.original_image: Image.Image | None = image
+        self.name: str = name if name is not None else t("layer.default_name")
 
         # Trasformazioni
-        self.offset_x = 0
-        self.offset_y = 0
-        self.zoom = 100  # percentuale
-        self.rotation = 0  # gradi
-        self.flip_h = False  # specchio orizzontale
-        self.flip_v = False  # specchio verticale
+        self.offset_x: int = 0
+        self.offset_y: int = 0
+        self.zoom: int = 100  # percentuale
+        self.rotation: int = 0  # gradi
+        self.flip_h: bool = False  # specchio orizzontale
+        self.flip_v: bool = False  # specchio verticale
 
         # Proprietà video (opzionali)
-        self.is_video = False
-        self.video_path = None
-        self.video_fps = 30
-        self.video_frames = 0
+        self.is_video: bool = False
+        self.video_path: str | None = None
+        self.video_fps: float = 30
+        self.video_frames: int = 0
 
         # Bounds calcolati nel canvas
-        self.bounds_in_canvas = None  # (x, y, w, h)
+        self.bounds_in_canvas: tuple[int, int, int, int] | None = None
 
         # Cache per immagine trasformata (rotation, flip)
-        self._cache = None
-        self._cache_key = None
+        self._cache: Image.Image | None = None
+        self._cache_key: tuple | None = None
 
         # Cache per immagine già zoomata (evita resize ripetuti durante pan)
-        self._zoom_cache = None
-        self._zoom_cache_key = None
+        self._zoom_cache: Image.Image | None = None
+        self._zoom_cache_key: tuple | None = None
 
         # Percorso file originale (per export a piena risoluzione quando è attivo downscale)
-        self._original_path = None
+        self._original_path: str | None = None
 
-    def get_transformed_image(self, use_cache=True, zoom=None, fast_mode=False):
+    def get_transformed_image(
+        self,
+        use_cache: bool = True,
+        zoom: int | None = None,
+        fast_mode: bool = False,
+    ) -> Image.Image | None:
         """Restituisce l'immagine con trasformazioni applicate (con cache).
         Se zoom e' fornito, restituisce l'immagine gia' ridimensionata (cache separata).
         fast_mode=True usa NEAREST per rotation/resize (piu' veloce durante il drag).
@@ -176,20 +183,20 @@ class ImageLayer:
 
         return img
 
-    def invalidate_cache(self):
+    def invalidate_cache(self) -> None:
         """Invalida la cache dell'immagine trasformata"""
         self._cache = None
         self._cache_key = None
         self._zoom_cache = None
         self._zoom_cache_key = None
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Libera risorse associate al layer"""
         self.invalidate_cache()
         self.original_image = None
         self.bounds_in_canvas = None
 
-    def get_display_name(self):
+    def get_display_name(self) -> str:
         return f"{self.name} ({self.id})"
 
 
@@ -256,6 +263,8 @@ class LiveVideoComposer:
 
         # Flag export cancellabile
         self._export_cancelled = threading.Event()
+        # Snapshot immutabile parametri export (TASK-008, popolato in _start_export)
+        self._export_snapshot = None
 
         # Setup
         self.setup_style()
@@ -993,7 +1002,7 @@ class LiveVideoComposer:
         """
         self.drag_drop_enabled = False
         # Ritarda il setup per dare tempo alla finestra di inizializzarsi
-        self.root.after(500, self._do_setup_drag_and_drop)
+        self.root.after(DND_SETUP_DELAY_MS, self._do_setup_drag_and_drop)
 
     def _do_setup_drag_and_drop(self):
         """Setup effettivo del drag and drop (chiamato dopo init finestra)"""
@@ -1066,7 +1075,7 @@ class LiveVideoComposer:
                 logger.error(f"Errore elaborazione file droppato: {e}")
 
     def _on_drop_windnd(self, files):
-        """Gestisce il drop di file tramite windnd"""
+        """Gestisce il drop di file tramite windnd (può essere chiamato fuori dal thread Tk)."""
         processed = []
         for filepath in files:
             try:
@@ -1079,7 +1088,7 @@ class LiveVideoComposer:
             except Exception as e:
                 logger.error(f"Errore decodifica file windnd: {e}")
         if processed:
-            self._process_dropped_files(processed)
+            self.root.after(0, lambda: self._process_dropped_files(processed))
 
     def _on_drop_tkdnd(self, event):
         """Gestisce il drop di file tramite tkinterdnd2"""
@@ -1251,7 +1260,7 @@ class LiveVideoComposer:
             else:
                 self.load_image(filepath)
 
-    def load_image(self, filepath):
+    def load_image(self, filepath: str | os.PathLike) -> None:
         """Carica un'immagine come nuovo layer.
         Se l'immagine e' molto piu grande dell'output, crea una working copy ridotta
         per la preview (max 2x output), mantenendo il path originale per l'export.
@@ -1280,8 +1289,8 @@ class LiveVideoComposer:
 
             # Downscale working copy: se l'immagine e' piu grande di 2x l'output,
             # crea una copia ridotta per la preview. L'export ricarica da disco.
-            max_working_w = output_w * 2
-            max_working_h = output_h * 2
+            max_working_w = int(output_w * DOWNSCALE_THRESHOLD)
+            max_working_h = int(output_h * DOWNSCALE_THRESHOLD)
             original_path = None
             if img_w > max_working_w or img_h > max_working_h:
                 ds_scale = min(max_working_w / max(1, img_w), max_working_h / max(1, img_h))
@@ -1343,7 +1352,7 @@ class LiveVideoComposer:
             logger.exception(f"Errore caricamento immagine {filepath}: {e}")
             messagebox.showerror(t("dialog.error"), t("dialog.load_error", Path(filepath).name, str(e)))
 
-    def load_video(self, filepath):
+    def load_video(self, filepath: str | os.PathLike) -> None:
         """Carica un video - salva il percorso e usa il primo frame come anteprima"""
         if not VIDEO_SUPPORT:
             messagebox.showerror(t("dialog.error"), t("dialog.opencv_missing"))
@@ -1766,7 +1775,13 @@ class LiveVideoComposer:
 
         return (x, y, final_w, final_h)
 
-    def create_composite_image(self, output_w, output_h, for_export=False, target_size=None):
+    def create_composite_image(
+        self,
+        output_w: int,
+        output_h: int,
+        for_export: bool = False,
+        target_size: tuple[int, int] | None = None,
+    ) -> Image.Image:
         """Crea l'immagine composita di tutti i layer
 
         Args:
@@ -1831,7 +1846,52 @@ class LiveVideoComposer:
 
         return out_img.convert('RGB')
 
-    def _schedule_redraw(self, delay_ms=16):
+    def _create_composite_from_snapshot(self, snapshot):
+        """Crea l'immagine composita usando esclusivamente lo snapshot export (TASK-008).
+
+        Versione thread-safe di `create_composite_image(for_export=True)` che NON
+        legge `self.layers`/`self.output_*`/`self.bg_color_var`: tutti i parametri
+        sono letti dal dict `snapshot` creato in `_build_export_snapshot()`.
+        """
+        output_w = max(1, snapshot['output_w'])
+        output_h = max(1, snapshot['output_h'])
+        out_img = Image.new('RGBA', (output_w, output_h), color=snapshot['bg_color'])
+        resample = Image.Resampling.LANCZOS
+
+        for entry in snapshot['layers']:
+            try:
+                base = entry['original_image']
+                if base is None:
+                    continue
+                img = base.copy()
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                if entry['flip_h']:
+                    img = img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+                if entry['flip_v']:
+                    img = img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+                if entry['rotation'] != 0:
+                    img = img.rotate(-entry['rotation'], resample=Image.Resampling.BILINEAR, expand=True)
+                zoom_pct = entry['zoom'] / 100.0
+                new_w = max(1, int(img.size[0] * zoom_pct))
+                new_h = max(1, int(img.size[1] * zoom_pct))
+                img = img.resize((new_w, new_h), resample)
+                x = (output_w - new_w) // 2 + entry['offset_x']
+                y = (output_h - new_h) // 2 + entry['offset_y']
+                try:
+                    out_img.paste(img, (x, y), img)
+                except ValueError:
+                    try:
+                        out_img.paste(img, (x, y))
+                    except Exception:
+                        pass
+            except Exception as e:
+                logger.warning(f"Errore rendering snapshot layer {entry.get('name')}: {e}")
+                continue
+
+        return out_img.convert('RGB')
+
+    def _schedule_redraw(self, delay_ms=DEBOUNCE_NORMAL_MS):
         """Schedula un redraw con debounce (evita accumulo eventi durante drag)"""
         if self._redraw_job is not None:
             self.root.after_cancel(self._redraw_job)
@@ -1848,7 +1908,7 @@ class LiveVideoComposer:
             self._redraw_canvas_internal()
         else:
             # Durante drag: 33ms (~30fps) per ridurre carico; altrimenti 16ms (~60fps)
-            delay = 33 if self.is_dragging else 16
+            delay = DEBOUNCE_DRAG_MS if self.is_dragging else DEBOUNCE_NORMAL_MS
             self._schedule_redraw(delay)
 
     def _redraw_canvas_internal(self):
@@ -2307,9 +2367,49 @@ class LiveVideoComposer:
 
     # ==================== EXPORT ====================
 
+    def _build_export_snapshot(self):
+        """Crea uno snapshot immutabile dei parametri di export (TASK-008).
+
+        Durante l'export il thread dedicato lavora su una copia congelata dei
+        parametri di ogni layer e dello stato globale (output_w/h, bg_color).
+        In questo modo eventuali modifiche dell'utente sui layer durante l'export
+        (aggiunta/rimozione/trasformazione) NON corrompono l'output e non causano
+        race condition.
+
+        Riferimenti PIL.Image condivisi (non deep-copy) — gli oggetti Image non
+        vengono mutati in place durante il rendering.
+        """
+        return {
+            'output_w': max(1, self.output_width.get()),
+            'output_h': max(1, self.output_height.get()),
+            'bg_color': self.bg_color_var.get(),
+            'img_quality': self.img_quality.get() if hasattr(self, 'img_quality') else 100,
+            'fps': max(1, self.fps_var.get()) if hasattr(self, 'fps_var') else 30,
+            'layers': [
+                {
+                    'id': layer.id,
+                    'name': layer.name,
+                    'original_image': layer.original_image,  # ref condiviso (no copy)
+                    'offset_x': layer.offset_x,
+                    'offset_y': layer.offset_y,
+                    'zoom': layer.zoom,
+                    'rotation': layer.rotation,
+                    'flip_h': layer.flip_h,
+                    'flip_v': layer.flip_v,
+                    'is_video': layer.is_video,
+                    'video_path': layer.video_path,
+                    '_original_path': layer._original_path,
+                    # Riferimento al layer originale (per invalidazione cache durante export high-res)
+                    '_layer_ref': layer,
+                }
+                for layer in self.layers
+            ],
+        }
+
     def _start_export(self):
         """Prepara UI per export: mostra progress bar e pulsante Annulla."""
         self._export_cancelled.clear()
+        self._export_snapshot = self._build_export_snapshot()
         self.progress.start()
         self.cancel_btn.pack(fill=tk.X, pady=(0, 8))
 
@@ -2378,40 +2478,67 @@ class LiveVideoComposer:
         thread.start()
 
     def _do_export_image(self, filepath):
-        """Esporta come immagine a piena risoluzione.
-        Per i layer con _original_path (working copy ridotta), ricarica da disco
-        l'immagine originale ad alta risoluzione prima del compositing.
+        """Esporta come immagine a piena risoluzione usando lo snapshot immutabile.
+
+        Usa `self._export_snapshot` (TASK-008) per thread-safety: eventuali modifiche
+        ai layer durante l'export NON alterano l'output.
+        Per i layer con `_original_path` (working copy ridotta), ricarica da disco
+        l'immagine originale ad alta risoluzione nello snapshot e ripristina il
+        riferimento nel layer live nel `finally`.
         """
-        restored_images = {}
+        snapshot = self._export_snapshot
+        restored_live = {}  # layer_ref -> original working-copy da ripristinare
+        cancelled = False
         try:
-            # Snapshot dei valori dal thread principale (thread-safety)
-            # NOTA: .get() su IntVar/StringVar e' thread-safe in Tkinter CPython
-            output_w = self.output_width.get()
-            output_h = self.output_height.get()
-            quality = self.img_quality.get()
+            if snapshot is None:
+                raise RuntimeError("Snapshot export non inizializzato")
+
+            output_w = snapshot['output_w']
+            output_h = snapshot['output_h']
+            quality = snapshot['img_quality']
 
             logger.info(f"Export immagine: {output_w}x{output_h} -> {filepath}")
 
             # Sostituisci temporaneamente le working copy con gli originali ad alta risoluzione
-            for layer in self.layers:
-                if layer._original_path and os.path.isfile(layer._original_path):
+            # NEL solo snapshot (il layer live resta quello ridotto per la preview).
+            for entry in snapshot['layers']:
+                orig_path = entry.get('_original_path')
+                if orig_path and os.path.isfile(orig_path):
                     try:
-                        orig = Image.open(layer._original_path)
+                        orig = Image.open(orig_path)
                         orig.load()
                         if orig.mode not in ('RGB', 'RGBA'):
                             orig = orig.convert('RGBA')
-                        restored_images[layer.id] = layer.original_image
-                        layer.original_image = orig
-                        layer.invalidate_cache()
-                        logger.info(f"Export: ripristinata immagine originale {layer.name} ({orig.size[0]}x{orig.size[1]})")
+                        # Sostituisci solo nello snapshot; il layer live resta intatto
+                        entry['original_image'] = orig
+                        # Invalida cache del layer live per coerenza post-export
+                        live = entry.get('_layer_ref')
+                        if live is not None:
+                            restored_live[live] = True
+                        logger.info(
+                            f"Export: originale ricaricato per {entry.get('name')} "
+                            f"({orig.size[0]}x{orig.size[1]})"
+                        )
                     except Exception as e:
-                        logger.warning(f"Export: impossibile ricaricare originale per {layer.name}: {e}")
-                        # Fallback: usa working copy gia' in memoria
+                        logger.warning(
+                            f"Export: impossibile ricaricare originale per "
+                            f"{entry.get('name')}: {e}"
+                        )
 
-            # Usa for_export=True per qualita' massima (LANCZOS)
-            img = self.create_composite_image(output_w, output_h, for_export=True)
+            if self._export_cancelled.is_set():
+                cancelled = True
+                logger.info("Export immagine annullato prima del compositing")
+                return
+
+            # Rendering thread-safe dallo snapshot
+            img = self._create_composite_from_snapshot(snapshot)
+
+            if self._export_cancelled.is_set():
+                cancelled = True
+                logger.info("Export immagine annullato dopo compositing")
+                return
+
             ext = Path(filepath).suffix.lower()
-
             if ext in ['.jpg', '.jpeg']:
                 img.convert('RGB').save(filepath, 'JPEG', quality=quality, optimize=True)
             elif ext == '.png':
@@ -2421,37 +2548,49 @@ class LiveVideoComposer:
             else:
                 img.save(filepath)
 
-            if self._export_cancelled.is_set():
-                logger.info("Export immagine annullato")
-                self.root.after(0, self._stop_export)
-                return
-
             file_size = Path(filepath).stat().st_size
             logger.info(f"Export completato: {file_size / 1024:.1f} KB")
-
-            self.root.after(0, self._stop_export)
-            self.root.after(0, lambda: messagebox.showinfo(t("dialog.success"), t("dialog.collage_saved", filepath)))
+            self.root.after(0, lambda: messagebox.showinfo(
+                t("dialog.success"), t("dialog.collage_saved", filepath)
+            ))
         except Exception as ex:
-            logger.error(f"Errore export immagine: {ex}")
-            self.root.after(0, self._stop_export)
+            logger.exception(f"Errore export immagine: {ex}")
             self.root.after(0, lambda err=str(ex): messagebox.showerror(t("dialog.error"), err))
         finally:
-            # Ripristina sempre le working copy per la preview
-            for layer in self.layers:
-                if layer.id in restored_images:
-                    layer.original_image = restored_images[layer.id]
-                    layer.invalidate_cache()
+            # Invalida cache dei layer live per cui abbiamo usato l'immagine originale
+            # (la preview potrebbe mostrare cache stantia se qualcosa e' cambiato).
+            for live in restored_live:
+                try:
+                    live.invalidate_cache()
+                except Exception:
+                    pass
+            # Rimuovi file parziale se export cancellato
+            if cancelled and filepath and os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                    logger.info(f"File parziale rimosso: {filepath}")
+                except OSError as e:
+                    logger.warning(f"Impossibile rimuovere file parziale {filepath}: {e}")
+            # Libera snapshot e memoria
+            self._export_snapshot = None
             gc.collect()
+            try:
+                self.root.after(0, self._stop_export)
+            except Exception:
+                pass
 
     def _do_export_video(self, filepath, video_layer):
-        """Esporta video con tutte le trasformazioni applicate"""
+        """Esporta video con tutte le trasformazioni applicate (snapshot-based)."""
         cap = None
         out = None
         cancelled = False
+        snapshot = self._export_snapshot
         try:
-            output_w = max(1, self.output_width.get())
-            output_h = max(1, self.output_height.get())
-            fps = max(1, self.fps_var.get())
+            if snapshot is None:
+                raise RuntimeError("Snapshot export non inizializzato")
+            output_w = snapshot['output_w']
+            output_h = snapshot['output_h']
+            fps = snapshot['fps']
             ext = Path(filepath).suffix.lower()
 
             logger.info(f"Export video: {output_w}x{output_h} @ {fps}fps -> {filepath}")
@@ -2462,14 +2601,29 @@ class LiveVideoComposer:
 
             total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 1))
 
-            # Pre-calcola trasformazioni costanti (snapshot thread-safe)
-            needs_flip_h = video_layer.flip_h
-            needs_flip_v = video_layer.flip_v
-            rotation = video_layer.rotation
-            zoom = video_layer.zoom / 100.0
-            offset_x = video_layer.offset_x
-            offset_y = video_layer.offset_y
-            bg_color = self.bg_color_var.get()
+            # Snapshot thread-safe dei parametri layer video (TASK-008)
+            # Cerca il layer video nello snapshot per usare valori congelati
+            vid_entry = next(
+                (e for e in snapshot['layers'] if e['is_video'] and e['_layer_ref'] is video_layer),
+                None,
+            )
+            if vid_entry is None:
+                # Fallback: leggi live (non dovrebbe mai accadere)
+                logger.warning("Video layer non trovato nello snapshot, uso valori live")
+                needs_flip_h = video_layer.flip_h
+                needs_flip_v = video_layer.flip_v
+                rotation = video_layer.rotation
+                zoom = video_layer.zoom / 100.0
+                offset_x = video_layer.offset_x
+                offset_y = video_layer.offset_y
+            else:
+                needs_flip_h = vid_entry['flip_h']
+                needs_flip_v = vid_entry['flip_v']
+                rotation = vid_entry['rotation']
+                zoom = vid_entry['zoom'] / 100.0
+                offset_x = vid_entry['offset_x']
+                offset_y = vid_entry['offset_y']
+            bg_color = snapshot['bg_color']
 
             # Codec in base al formato
             if ext == '.mp4':
@@ -2607,6 +2761,8 @@ class LiveVideoComposer:
                     logger.info(f"File parziale rimosso: {filepath}")
                 except OSError as e:
                     logger.warning(f"Impossibile rimuovere file parziale {filepath}: {e}")
+            # Libera snapshot (TASK-008)
+            self._export_snapshot = None
             # Stop export SEMPRE (evita progress bar bloccata su eccezione)
             try:
                 self.root.after(0, self._stop_export)

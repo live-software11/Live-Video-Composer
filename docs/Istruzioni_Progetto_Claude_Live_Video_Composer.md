@@ -26,8 +26,9 @@ Applicazione desktop **Python/Tkinter** per la creazione di collage multi-layer 
 
 ### Stack
 - **GUI:** Tkinter con tema dark blue custom (#0a1929)
-- **Immagini:** Pillow (PIL) >=12.1.0
-- **Video:** OpenCV (opencv-python-headless) >=4.10.0 — ~50MB in meno di opencv-python
+- **Python:** 3.10+ (testato su 3.13) — Pillow 12 richiede >=3.10
+- **Immagini:** Pillow (PIL) >=12.1.1,<13
+- **Video:** OpenCV (opencv-python-headless) >=4.13.0.92 — ~50MB in meno di opencv-python
 - **Drag & Drop:** windnd (hook Python puro, funziona con --onefile)
 - **Build:** PyInstaller (onedir installer, onefile portable), Inno Setup per installer Windows
 
@@ -35,7 +36,7 @@ Applicazione desktop **Python/Tkinter** per la creazione di collage multi-layer 
 
 ```
 Live video composer/
-├── main.py                    — Sorgente unico (~2580 righe)
+├── main.py                    — Sorgente unico (~2790 righe)
 ├── localization.py            — Dizionari IT/EN, t(), init_language(), set_language()
 ├── requirements.txt           — Pillow, opencv-python-headless, numpy, windnd
 ├── Live_Video_Composer.spec           — PyInstaller onedir (installer)

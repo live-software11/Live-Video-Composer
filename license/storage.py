@@ -80,26 +80,31 @@ def delete_license() -> None:
 
 
 def load_pending() -> dict[str, Any] | None:
-    """Carica il file pending_activation.json (in chiaro)."""
+    """Carica il file pending_activation cifrato (con fallback legacy in chiaro)."""
     path = _get_app_data_dir() / "pending_activation.json"
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        raw = path.read_bytes()
+        try:
+            f = _get_fernet()
+            plaintext = f.decrypt(raw)
+            return json.loads(plaintext.decode("utf-8"))
+        except Exception:
+            return json.loads(raw.decode("utf-8"))
     except Exception as exc:
         logger.warning("Failed to load pending activation: %s", exc)
         return None
 
 
 def save_pending(license_key: str, fingerprint: str) -> None:
-    """Salva i dati di attivazione in attesa di approvazione admin."""
+    """Salva i dati di attivazione in attesa di approvazione admin (cifrati)."""
     path = _get_app_data_dir() / "pending_activation.json"
     try:
-        path.write_text(
-            json.dumps({"license_key": license_key, "fingerprint": fingerprint}),
-            encoding="utf-8",
-        )
-    except OSError as exc:
+        f = _get_fernet()
+        plaintext = json.dumps({"license_key": license_key, "fingerprint": fingerprint}).encode("utf-8")
+        path.write_bytes(f.encrypt(plaintext))
+    except Exception as exc:
         logger.warning("Failed to save pending activation: %s", exc)
 
 

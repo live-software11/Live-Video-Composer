@@ -94,7 +94,7 @@ def _offline_grace_ok(license_data: dict[str, Any]) -> bool:
     # Controllo grace period su verify_before
     verify_before = _parse_iso(license_data.get("verify_before"))
     if verify_before is None:
-        return True  # Nessuna finestra di verifica → ok offline
+        return False  # Dati incompleti: richiede verifica online
     deadline = verify_before + timedelta(days=OFFLINE_GRACE_DAYS)
     return now <= deadline
 

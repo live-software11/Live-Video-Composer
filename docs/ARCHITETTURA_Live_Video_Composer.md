@@ -68,20 +68,24 @@
 
 | Tecnologia | Versione | Ruolo |
 |---|---|---|
-| **Python** | 3.9+ (testato 3.13) | Runtime |
+| **Python** | 3.10+ (testato 3.13) | Runtime — Pillow 12 richiede >=3.10 |
 | **Tkinter** | stdlib | GUI |
-| **Pillow (PIL)** | >=12.1.0 | Elaborazione immagini |
-| **OpenCV** | opencv-python-headless >=4.10.0 | Elaborazione video |
+| **Pillow (PIL)** | >=12.1.1,<13 | Elaborazione immagini (12.1.1 security fix) |
+| **OpenCV** | opencv-python-headless >=4.13.0.92 | Elaborazione video |
 | **numpy** | >=1.26.0 | Array per video |
 | **windnd** | >=1.0.7 | Drag & drop nativo Windows |
-| **PyInstaller** | >=6.0 | Build eseguibile |
+| **PyInstaller** | >=6.11 | Build eseguibile |
 | **Inno Setup** | 6 | Installer Windows |
+| **requests** | >=2.32.0 | HTTP client sistema licenze (solo installer build) |
+| **cryptography** | >=44.0.0 | Storage licenza cifrato Fernet (solo installer build) |
+| **wmi** | >=1.5.1 | Fingerprint hardware Windows (solo installer build) |
 
 ### Linguaggi e LOC
 
 | Linguaggio | Dove | LOC appross. |
 |---|---|---|
-| **Python** | `main.py` | ~2340 |
+| **Python** | `main.py` | ~2790 |
+| **Python** | `license/` | ~790 (modulo gate licenze) |
 
 ---
 
@@ -91,11 +95,14 @@
 
 | Pacchetto | Versione | Funzione |
 |---|---|---|
-| Pillow | >=12.1.0 | Immagini, resize, composite |
-| opencv-python-headless | >=4.10.0 | Video capture, export MP4/GIF |
+| Pillow | >=12.1.1,<13 | Immagini, resize, composite (12.1.1 security fix) |
+| opencv-python-headless | >=4.13.0.92 | Video capture, export MP4/GIF |
 | numpy | >=1.26.0 | Array per cv2 |
 | windnd | >=1.0.7 | Drag & drop (hook Python) |
 | tkinterdnd2 | >=0.4.3 | Fallback D&D (opzionale) |
+| requests | >=2.32.0 | HTTP client API Live Works (solo installer build) |
+| cryptography | >=44.0.0 | Storage licenza cifrato (solo installer build) |
+| wmi | >=1.5.1 | Fingerprint hardware (solo installer build) |
 
 **Nota:** `opencv-python-headless` espone `cv2` con la stessa API di `opencv-python`, ma ~50MB in meno e nessuna dipendenza Qt.
 
@@ -376,8 +383,22 @@ Dettaglio storico in `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.m
 
 ## 14. CHANGELOG
 
+### v1.4.2 (2026-04-15) — TASK BATCH 2026-04-15
+- **Runtime** — Guard `sys.version_info < (3, 10)` in cima a `main.py`; stack bumpato a Pillow >=12.1.1,<13 (CVE-2026-25990 + fix 12.1.1) e opencv-python-headless >=4.13.0.92.
+- **Stabilità export** — `_do_export_video` pulisce file parziale su cancel, `gc.collect()` in finally, release OpenCV in try/except, `_stop_export` SEMPRE in finally (anche su eccezione). Stesso pattern applicato a `_do_export_image`.
+- **Thread safety export** — Introdotto `_build_export_snapshot()` + `_create_composite_from_snapshot()`: l'export legge parametri congelati all'avvio, modifiche concorrenti ai layer non corrompono l'output (TASK-008).
+- **load_video robusto** — Controlli `isOpened()`, dimensioni >0, primo frame; messaggi granulari per codec mancante / dimensioni invalide / errore cv2.
+- **load_image** — Eccezioni PIL granulari (`UnidentifiedImageError`, `DecompressionBombError`, `FileNotFoundError`, `PermissionError`, `OSError`) con i18n dedicate.
+- **Preview scale guard** — `max(1e-6, ...)` e `canvas_w/h_safe` per evitare division-by-zero su finestra minimizzata.
+- **Progress video** — Label frame-by-frame (`{current}/{total} ({pct}%)`) ogni 10 frame invece di ogni 30.
+- **Log rotation** — `RotatingFileHandler` 5MB × 3 backup su `live_video_composer.log`.
+- **Magic numbers** — Costanti centralizzate: `MAX_GIF_FRAMES=3000`, `DOWNSCALE_THRESHOLD=2.0`, `DND_SETUP_DELAY_MS=500`, `DEBOUNCE_NORMAL_MS=16`, `DEBOUNCE_DRAG_MS=33`, `PREVIEW_SCALE_MARGIN=0.9`.
+- **Type hints** — `from __future__ import annotations` + annotazioni su `ImageLayer`, `load_image`, `load_video`, `create_composite_image`, `get_transformed_image`.
+- **PyInstaller** — `.spec` Installer e Portable: `excludes` estesi (sphinx, tkinter.test, unittest, IPython, notebook); Portable esclude esplicitamente il modulo `license` e le sue dipendenze runtime; Installer mantiene `collect_all('windnd')` e include il modulo `license` con runtime hook.
+- **i18n** — Aggiunte 10 chiavi in IT/EN: `error.image_unsupported`, `error.image_too_large`, `error.image_not_found`, `error.image_permission`, `error.image_io`, `error.video_cannot_open`, `error.video_codec_missing`, `error.video_invalid_dimensions`, `error.video_cv2`, `export_video_progress_frames`.
+
 ### v1.4.1 (2026-03-18)
-- **Stack aggiornato** — Python 3.9+ (Pillow 12 richiede), Pillow >=12.1.0 (CVE-2026-25990), opencv-python-headless >=4.10.0, numpy >=1.26.0, tkinterdnd2 >=0.4.3, PyInstaller >=6.0
+- **Stack aggiornato** — Python 3.10+ (Pillow 12 richiede), Pillow >=12.1.1,<13 (CVE-2026-25990 + security fix 12.1.1), opencv-python-headless >=4.13.0.92, numpy >=1.26.0, tkinterdnd2 >=0.4.3, PyInstaller >=6.11. Runtime: `requests >=2.32`, `cryptography >=44`, `wmi >=1.5` per sistema licenze (solo installer).
 - **Documentazione** — README, ARCHITETTURA, System_Prompt, Cursor rules allineate
 
 ### v1.4.0 (2026-03-18)

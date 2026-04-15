@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import ast; ast.parse\\(open\\('main.py', encoding='utf-8'\\).read\\(\\)\\); print\\('main.py OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('localization.py', encoding='utf-8'\\).read\\(\\)\\); print\\('localization.py OK'\\)\")",
+      "Bash(wc -l main.py localization.py license/*.py scripts/license_runtime_hook.py)",
+      "Bash(python -c ':*)",
+      "Bash(wc -l docs/*.md README.md)"
+    ]
+  }
+}

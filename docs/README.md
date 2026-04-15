@@ -37,7 +37,7 @@ L'app supporta:
 ## Requisiti
 
 - **Sistema:** Windows 10/11
-- **Python:** 3.9+ (solo per sviluppo; l'exe portable non richiede Python)
+- **Python:** 3.10+ (solo per sviluppo; l'exe portable non richiede Python)
 - **RAM:** 4 GB minimo, 8 GB consigliato per video
 
 ## Come funziona
@@ -81,7 +81,7 @@ The app supports:
 ## Requirements
 
 - **System:** Windows 10/11
-- **Python:** 3.9+ (development only; portable exe does not require Python)
+- **Python:** 3.10+ (development only; portable exe does not require Python)
 - **RAM:** 4 GB minimum, 8 GB recommended for video
 
 ## How it works

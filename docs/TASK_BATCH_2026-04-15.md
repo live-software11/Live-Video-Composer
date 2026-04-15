@@ -8,59 +8,68 @@
 
 ---
 
-## 🟦 STATO ESECUZIONE — Sessione 15/04/2026 (Claude Code)
+## 🟩 STATO ESECUZIONE — CHIUSO 15/04/2026 (Claude Code)
 
-**✅ COMPLETATI in questa sessione (11 task):**
-- TASK-001 — Python 3.10+ guard in `main.py` + commento `requirements.txt` aggiornato (docs NON aggiornati, vedi sotto)
-- TASK-002 — `Pillow>=12.1.1,<13` in `requirements.txt` (docs NON aggiornati)
-- TASK-003 — `opencv-python-headless>=4.13.0.92` (docs NON aggiornati)
-- TASK-004 — `load_video` robusto (isOpened, w/h>0, primo frame, cv2.error, finally release)
-- TASK-005 — `_do_export_video` flag `cancelled`, `gc.collect()` in finally, rimozione file parziale, `_stop_export` garantito
-- TASK-006 — Pattern try/except/finally con `logger.exception`, release sicure, `_stop_export` SEMPRE
-- TASK-007 — `preview_scale` guard con floor `1e-6` e `canvas_w/h_safe`
-- TASK-009 — Eccezioni PIL granulari in `load_image` (+ 5 chiavi i18n IT/EN)
-- TASK-010 — Progress video frame-by-frame (`export_video_progress_frames` IT/EN)
-- TASK-011 — Costanti centralizzate (`MAX_GIF_FRAMES`, `DOWNSCALE_THRESHOLD`, `DND_SETUP_DELAY_MS`, `DEBOUNCE_NORMAL_MS`, `DEBOUNCE_DRAG_MS`, `PREVIEW_SCALE_MARGIN`). **NOTA:** applicate solo dove rilevante per i task collegati. Da sostituire sistematicamente i residui magic number `16/33/500/2.0` nel codice (cerca `grep -n "500\|33\|16"` filtrando setup D&D e debounce).
-- TASK-013 — Spec PyInstaller: `excludes` estesi, `collect_all('windnd')` già presente (vincolo #2 OK)
-- TASK-014 — Log rotation `RotatingFileHandler` 5MB × 3
+**Stato finale:** 14/15 task eseguiti, 1 SKIP motivato. Batch **chiuso**.
 
-**⚠️ INCOMPLETI / DA COMPLETARE nella prossima sessione:**
+**✅ COMPLETATI (14 task):**
 
-### TASK-008 — Snapshot immutabile layer prima dell'export (NON FATTO)
-Richiede refactor non banale di `_do_export_image` e `_do_export_video`:
-1. Creare in `_start_export` la lista `self._export_snapshot` con i parametri per-layer.
-2. Modificare `_do_export_image` e `_do_export_video` per usare **esclusivamente** lo snapshot (mai `self.layers`, `self.output_width`, `self.bg_color_var`).
-3. Nel `finally` azzerare `self._export_snapshot = None`.
-4. Aggiornare `docs/ARCHITETTURA_Live_Video_Composer.md` sez. 7 e 9.
+| # | Task | File toccati | Note |
+|---|---|---|---|
+| 001 | Python 3.10+ guard | `main.py`, `requirements.txt`, docs | `sys.exit` se <3.10 |
+| 002 | Pillow >=12.1.1,<13 | `requirements.txt`, docs | Security fix 12.1.1 |
+| 003 | opencv-python-headless >=4.13.0.92 | `requirements.txt`, docs | — |
+| 004 | `load_video` robusto | `main.py`, `localization.py` | `isOpened`, dims, codec msg, cv2.error |
+| 005 | Export video cancel cleanup | `main.py` | Flag `cancelled`, rimozione file parziale, gc.collect |
+| 006 | Pattern try/except/finally unificato | `main.py` | `_stop_export` SEMPRE + `logger.exception` |
+| 007 | Preview scale guard | `main.py` | Floor `1e-6`, `canvas_w/h_safe` |
+| 008 | Snapshot immutabile export | `main.py` | `_build_export_snapshot`, `_create_composite_from_snapshot` |
+| 009 | Eccezioni PIL granulari | `main.py`, `localization.py` | 5 exception types distinti |
+| 010 | Progress video frame-by-frame | `main.py`, `localization.py` | `{current}/{total} ({pct}%)` |
+| 011 | Magic number centralizzati | `main.py` | 6 costanti operative applicate ovunque |
+| 013 | PyInstaller spec hardening | `.spec` x2 | Excludes estesi, license split installer/portable |
+| 014 | Log rotation 5MB×3 | `main.py` | `RotatingFileHandler` |
+| 015 | Type hints core APIs | `main.py` | `from __future__`, ImageLayer + load_* |
 
-### TASK-012 — `_canvas_persistent_ids` cleanup (VERIFICATO: NON NECESSARIO)
-Ispezione `main.py:~1839`: `_canvas_persistent_ids` è `{"bg", "img", "border"}`, **non** è indicizzato per `layer.id`. Il presupposto della task è errato — nessun leak. `remove_selected_layer` già invoca `layer.cleanup()`.
-**Azione prossima sessione:** marcare TASK-012 come `SKIP — premessa errata` in `docs/BugFix_Refactor_*.md` e aggiornare/rimuovere il task dal batch.
+**⏭️ SKIP motivato:**
+- **TASK-012** — `_canvas_persistent_ids` è `{bg, img, border}`, **non** indicizzato per layer. Premessa errata: nessun leak da fixare. `remove_selected_layer` già invoca `layer.cleanup()`. Registrato in `docs/BugFix_Refactor_*.md`.
 
-### TASK-015 — Type hints completi (NON FATTO)
-Puramente cosmetico, basso valore. Se eseguito: aggiungere `from __future__ import annotations` in cima a `main.py` e annotare `ImageLayer.__init__`, `load_image`, `load_video`, `create_composite_image`, `get_transformed_image`. Nessun cambiamento runtime.
+**📝 DOCUMENTAZIONE SINCRONIZZATA:**
+- ✅ `docs/ARCHITETTURA_Live_Video_Composer.md` sez. 2+3 (stack/dipendenze) + sez. 14 (changelog v1.4.2 con tutti i task)
+- ✅ `docs/Istruzioni_Progetto_Claude_Live_Video_Composer.md` sez. Stack (Python 3.10+, Pillow 12.1.1, OpenCV 4.13)
+- ✅ `docs/README.md` (Python 3.10+ in IT e EN)
+- ✅ `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.md` — entry per ogni task TASK-001..015, ottimizzazioni #9 e #10 aggiunte
+- `README.md` root: nessun riferimento versione da aggiornare
 
-### 📝 SYNC DOCUMENTAZIONE (NON FATTA — richiesto commit separato)
-Aggiornamenti rimasti in sospeso:
-- `docs/ARCHITETTURA_Live_Video_Composer.md` sez. 3 (Dipendenze): Python 3.10+, Pillow 12.1.1, OpenCV 4.13.0.92
-- `docs/ARCHITETTURA_Live_Video_Composer.md` sez. 14 (Changelog): entry per TASK eseguiti
-- `docs/ARCHITETTURA_Live_Video_Composer.md` sez. 7 + 9: dopo TASK-008
-- `docs/Istruzioni_Progetto_Claude_Live_Video_Composer.md` sez. Stack: Python 3.10+, OpenCV 4.13
-- `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.md`: aggiungere una riga per ciascun TASK-001..014 completato (formato esistente nel file)
-- `README.md`: "Python: 3.9+" → "Python: 3.10+"
+**🔒 VINCOLI SACRI RISPETTATI:**
+- #1 `windnd` hook Python — OK (invariato)
+- #2 `collect_all('windnd')` in entrambi gli spec — OK
+- #3 Setup D&D ritardato `DND_SETUP_DELAY_MS` (500ms) — OK
+- #4 Log in `%LOCALAPPDATA%\LiveVideoComposer\` — OK + rotation attiva
+- #5 Export in thread con `_start_export`/`_stop_export` + `root.after(0, ...)` — OK
+- #6 `cv2.VideoCapture.release()` sempre nel `finally` — OK + try/except
+- #7 GIF max `MAX_GIF_FRAMES` (3000) — OK
+- #8 `max(1, ...)` su output/fps/img_w/h — OK (esteso a preview_scale)
+- #9 `python -m PyInstaller` — OK (invariato)
+- #10 `opencv-python-headless` — OK (bumpato a 4.13.0.92)
+- #11 i18n IT+EN — OK (10 nuove chiavi in entrambe le lingue)
 
-### 🧹 PULIZIA RESIDUA MAGIC NUMBER (collegato TASK-011)
-Dopo `grep -n "3000\|2\.0\|500\|0\.9" main.py`, sostituire occorrenze rimaste con le costanti `MAX_GIF_FRAMES`, `DOWNSCALE_THRESHOLD`, `DND_SETUP_DELAY_MS`, `PREVIEW_SCALE_MARGIN` (attualmente applicate solo ai siti toccati dagli altri task).
+**🧪 VALIDAZIONE ESEGUITA IN-SESSIONE:**
+- `ast.parse(main.py)` → OK
+- `ast.parse(localization.py)` → OK
+- `import main` su Python 3.13 → OK, tutte le costanti esposte
+- Chiavi i18n verificate presenti in `it` e `en`
+- Type hints visibili via `__annotations__`
 
-### ✅ CHECKLIST POST-ESECUZIONE DA ESEGUIRE NELLA PROSSIMA SESSIONE
-- [ ] `python main.py` smoke test (avvio, D&D, export JPG, export MP4 breve, cancel export)
-- [ ] `pip install -r requirements.txt --upgrade` → installa Pillow 12.1.1+ e OpenCV 4.13+
-- [ ] `_clean_and_build.bat` → portable + installer OK, dimensioni ridotte vs precedente (effetto excludes)
-- [ ] Test portable `release/Live_Video_Composer_Portable.exe`
-- [ ] Verifica log in `%LOCALAPPDATA%\LiveVideoComposer\` — rotation attiva
-- [ ] Commit atomico "docs: sync architettura/bugfix per TASK_BATCH_2026-04-15"
-- [ ] Commit atomici per TASK-008 e TASK-015 se eseguiti
-- [ ] Dopo completamento: rinominare o archiviare questo file (`TASK_BATCH_2026-04-15.md`)
+**📋 CHECKLIST MANUALE RESIDUA (da eseguire localmente):**
+- [ ] `pip install -r requirements.txt --upgrade` → Pillow 12.1.1+, OpenCV 4.13+
+- [ ] `python main.py` smoke test — avvio, D&D immagine+video, transform, export JPG, export MP4 breve, cancel export
+- [ ] `_clean_and_build.bat` → portable + installer OK; confronta dimensione Portable vs v1.4.1 (attesa riduzione 10-30 MB)
+- [ ] Test `release/Live_Video_Composer_Portable.exe` (D&D + export)
+- [ ] Test `release/Live_Video_Composer_Setup_*.exe` (gate licenza + export)
+- [ ] Verifica `%LOCALAPPDATA%\LiveVideoComposer\live_video_composer.log` → rotation funzionante
+- [ ] Commit atomico: `git commit -m "[v1.4.2] TASK_BATCH_2026-04-15: runtime hardening, export thread-safety, i18n errors"`
+- [ ] Archiviare questo file in `docs/archive/` o rimuoverlo
 
 ---
 
@@ -88,25 +97,25 @@ Alcuni task richiedono l'ispezione di `main.py` per verificare lo stato corrente
 ## 📋 INDICE TASK
 
 ### 🔴 PRIORITÀ ALTA
-- ✅ [TASK-001] REFACTOR — Aggiornamento requirements.txt: Python 3.10+ (Pillow 12 drop 3.9) — **FATTO (main.py + requirements.txt; docs da sync)**
-- ✅ [TASK-002] BUG FIX — Pillow 12.1.1 security fix (CVE-2026-25990) — **FATTO (docs da sync)**
-- ✅ [TASK-003] REFACTOR — Bump opencv-python-headless >=4.13.0.92 — **FATTO (docs da sync)**
+- ✅ [TASK-001] REFACTOR — Aggiornamento requirements.txt: Python 3.10+ (Pillow 12 drop 3.9) — **FATTO (codice + docs sync)**
+- ✅ [TASK-002] BUG FIX — Pillow 12.1.1 security fix (CVE-2026-25990) — **FATTO (codice + docs sync)**
+- ✅ [TASK-003] REFACTOR — Bump opencv-python-headless >=4.13.0.92 — **FATTO (codice + docs sync)**
 - ✅ [TASK-004] BUG FIX — Validazione robusta `load_video` (file corrotti, codec mancante) — **FATTO**
 - ✅ [TASK-005] BUG FIX — Memory leak potenziale in `_do_export_video` (frame non rilasciati su cancel) — **FATTO**
 - ✅ [TASK-006] REFACTOR — Pattern `try/except/finally` unificato negli export thread — **FATTO**
 
 ### 🟡 PRIORITÀ MEDIA
 - ✅ [TASK-007] BUG FIX — Guard `max(1, ...)` su tutti i calcoli preview_scale — **FATTO**
-- ⏳ [TASK-008] FEATURE — Snapshot immutabile dei layer prima dell'export (thread safety) — **DA FARE prossima sessione**
-- ✅ [TASK-009] REFACTOR — Eccezioni PIL granulari in `load_image` e `_process_dropped_files` — **FATTO (load_image; `_process_dropped_files` NON toccato — verifica se necessario)**
-- ✅ [TASK-010] FEATURE — Progress percentuale export video (non solo indeterminato) — **FATTO (label testuale; progress bar resta `indeterminate`)**
-- 🟠 [TASK-011] REFACTOR — Centralizzare costanti magic number — **PARZIALE (costanti dichiarate; sostituzione sistematica residua da completare)**
-- ⏭️ [TASK-012] BUG FIX — `_canvas_persistent_ids` cleanup su rimozione layer — **SKIP — premessa errata (non keyed per layer)**
-- ✅ [TASK-013] REFACTOR — `.spec` PyInstaller: verifica `collect_all('windnd')` + `exclude` moduli pesanti — **FATTO**
+- ✅ [TASK-008] FEATURE — Snapshot immutabile dei layer prima dell'export (thread safety) — **FATTO (`_build_export_snapshot`, `_create_composite_from_snapshot`)**
+- ✅ [TASK-009] REFACTOR — Eccezioni PIL granulari in `load_image` — **FATTO (5 exception types + 5 chiavi i18n)**
+- ✅ [TASK-010] FEATURE — Progress percentuale export video — **FATTO (label `{current}/{total} ({pct}%)`)**
+- ✅ [TASK-011] REFACTOR — Centralizzare costanti magic number — **FATTO (6 costanti, sostituzione sistematica)**
+- ⏭️ [TASK-012] BUG FIX — `_canvas_persistent_ids` cleanup su rimozione layer — **SKIP — premessa errata (dict `{bg,img,border}` NON keyed per layer)**
+- ✅ [TASK-013] REFACTOR — `.spec` PyInstaller: `collect_all('windnd')` + `exclude` moduli pesanti — **FATTO (entrambi gli spec, license split installer/portable)**
 
 ### 🟢 PRIORITÀ BASSA (quando possibile)
 - ✅ [TASK-014] FEATURE — Log rotation su `live_video_composer.log` (max 5MB × 3 file) — **FATTO**
-- ⏳ [TASK-015] REFACTOR — Type hints completi su `ImageLayer` e funzioni core — **DA FARE prossima sessione**
+- ✅ [TASK-015] REFACTOR — Type hints completi su `ImageLayer` e funzioni core — **FATTO (`from __future__ import annotations` + annotazioni)**
 
 ---
 

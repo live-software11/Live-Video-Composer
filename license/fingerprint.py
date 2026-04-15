@@ -40,11 +40,18 @@ def compute_fingerprint() -> tuple[str, str]:
     if sys.platform != "win32":
         raise RuntimeError("License hardware fingerprint is Windows-only.")
 
-    mb = _wmi_query("SELECT SerialNumber FROM Win32_BaseBoard", "SerialNumber") or _UNKNOWN_MB
-    cpu = _wmi_query("SELECT ProcessorId FROM Win32_Processor", "ProcessorId") or _UNKNOWN_CPU
+    mb = _wmi_query("SELECT SerialNumber FROM Win32_BaseBoard", "SerialNumber")
+    cpu = _wmi_query("SELECT ProcessorId FROM Win32_Processor", "ProcessorId")
     disk = _wmi_query(
         "SELECT SerialNumber FROM Win32_DiskDrive WHERE Index=0", "SerialNumber"
-    ) or _NO_DISK
+    )
+
+    if not mb or not cpu or not disk:
+        missing = [k for k, v in [("MB", mb), ("CPU", cpu), ("DISK", disk)] if not v]
+        raise RuntimeError(
+            f"Hardware fingerprint incomplete — missing: {', '.join(missing)}. "
+            "WMI query failed; license activation requires real hardware identifiers."
+        )
 
     raw = f"{mb}|{cpu}|{disk}"
     fingerprint = hashlib.sha256(raw.encode("utf-8")).hexdigest()

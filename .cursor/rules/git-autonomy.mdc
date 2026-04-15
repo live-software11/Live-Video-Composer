@@ -10,6 +10,9 @@ alwaysApply: true
 
 Quando l'utente chiede di fare **commit and push** (o "committare", "pushare", "salvare su git"):
 
+1. **Prima del push:** `gh auth status` → account attivo **live-software11**; altrimenti `gh auth switch --user live-software11` (regola: `.cursor/rules/github-account-live-software11.mdc`).
+2. Poi:
+
 ```bash
 git add -A && git commit -m "chore: descrizione modifiche" && git push
 ```

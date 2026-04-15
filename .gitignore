@@ -59,3 +59,5 @@ _*.txt
 git_result.txt
 !_build_setup.bat
 !_clean_and_build.bat
+# Eccezione: package licenza (nome __init__.py altrimenti matcha _*.py)
+!license/__init__.py

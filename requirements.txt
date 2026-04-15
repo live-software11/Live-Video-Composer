@@ -1,12 +1,13 @@
 # Live Video Composer - Dipendenze
 # Installa con: pip install -r requirements.txt
 
-# Elaborazione immagini (obbligatorio) - Python 3.9+ richiesto per Pillow 12
-Pillow>=12.1.0
+# Elaborazione immagini (obbligatorio) - Python 3.10+ richiesto (Pillow 12 ha droppato 3.9)
+# 12.1.1 contiene fix di sicurezza (release 2026-02-11)
+Pillow>=12.1.1,<13
 
 # Elaborazione video (opzionale ma consigliato per export MP4/GIF)
 # opencv-python-headless: stessa API di opencv-python, ~50MB in meno, nessuna dipendenza Qt
-opencv-python-headless>=4.10.0
+opencv-python-headless>=4.13.0.92
 
 # Supporto array per video (richiesto se opencv-python-headless installato)
 numpy>=1.26.0
@@ -17,5 +18,17 @@ windnd>=1.0.7
 # Fallback D&D se windnd non disponibile (opzionale)
 tkinterdnd2>=0.4.3
 
+# ── Sistema licenze Live Works (solo build installer) ──────────────────────
+# Richiesti solo per la versione con gate licenza; non necessari per build portable.
+
+# HTTP client per le chiamate API Live Works
+requests>=2.32.0
+
+# Cifratura storage locale licenza (Fernet = AES-128-CBC + HMAC-SHA256)
+cryptography>=44.0.0
+
+# WMI per fingerprint hardware Windows (Win32_BaseBoard, Win32_Processor, Win32_DiskDrive)
+wmi>=1.5.1
+
 # Build eseguibile (solo per sviluppo: pip install pyinstaller)
-# pyinstaller>=6.0
+# pyinstaller>=6.11

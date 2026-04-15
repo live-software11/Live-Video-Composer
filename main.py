@@ -3,17 +3,31 @@ Live Video Composer - Convertitore di Immagini e Video con supporto Multi-Layer 
 Un'applicazione per adattare immagini e video a diverse risoluzioni e creare collage.
 """
 
+import sys
+
+if sys.version_info < (3, 10):
+    sys.exit("Python 3.10+ required (current: %s)" % sys.version)
+
+# ─── Gestione avvio con --deactivate (headless, prima di importare tkinter) ──
+# Usato dallo script di disinstallazione Inno Setup per liberare la licenza.
+import os
+_LICENSE_ENABLED = os.environ.get("LIVEWORKS_LICENSE_ENABLED", "").lower() == "true"
+
+if _LICENSE_ENABLED and "--deactivate" in sys.argv:
+    from license.manager import run_deactivate_uninstall
+    run_deactivate_uninstall()
+    sys.exit(0)
+
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, UnidentifiedImageError
 import threading
 import math
 from pathlib import Path
 import uuid
-import sys
-import os
 import logging
 import gc
+from logging.handlers import RotatingFileHandler
 
 from localization import (
     t, init_language, set_language, get_language,
@@ -37,13 +51,12 @@ def _get_log_path():
         log_dir = Path(tempfile.gettempdir())
     return log_dir / 'live_video_composer.log'
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler(_get_log_path(), encoding='utf-8', errors='replace'),
-    ]
+_log_handler = RotatingFileHandler(
+    _get_log_path(), maxBytes=5 * 1024 * 1024, backupCount=3,
+    encoding='utf-8', errors='replace'
 )
+_log_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+logging.basicConfig(level=logging.INFO, handlers=[_log_handler])
 logger = logging.getLogger('LiveVideoComposer')
 
 try:
@@ -63,6 +76,16 @@ VIDEO_FORMATS = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm'}
 HANDLE_SIZE = 8
 HANDLE_COLOR = "#4a9eff"
 ROTATION_HANDLE_DISTANCE = 25
+
+# ============================================================================
+# COSTANTI OPERATIVE
+# ============================================================================
+MAX_GIF_FRAMES = 3000               # Limite memoria per GIF animate
+DOWNSCALE_THRESHOLD = 2.0           # Se img > 2x output -> working copy ridotta
+DND_SETUP_DELAY_MS = 500            # Ritardo setup windnd (vincolo sacro #3)
+DEBOUNCE_NORMAL_MS = 16             # Redraw ~60fps
+DEBOUNCE_DRAG_MS = 33               # Redraw ~30fps durante drag
+PREVIEW_SCALE_MARGIN = 0.9          # Margine preview sul canvas
 
 
 class ImageLayer:
@@ -963,7 +986,7 @@ class LiveVideoComposer:
 
     def setup_drag_and_drop(self):
         """Configura il drag and drop per file esterni.
-        
+
         Usa windnd (Python puro, nessun subclassing pericoloso).
         Fallback: tkinterdnd2.
         Il setup è ritardato per assicurare che la finestra sia pronta.
@@ -1078,8 +1101,10 @@ class LiveVideoComposer:
         output_w = max(1, self.output_width.get())
         output_h = max(1, self.output_height.get())
 
-        # Scala preview
-        self.preview_scale = min(canvas_w / output_w, canvas_h / output_h) * 0.9
+        # Scala preview (guard edge case: canvas_w/h = 0)
+        canvas_w_safe = max(1, canvas_w)
+        canvas_h_safe = max(1, canvas_h)
+        self.preview_scale = max(1e-6, min(canvas_w_safe / output_w, canvas_h_safe / output_h) * PREVIEW_SCALE_MARGIN)
         preview_w = max(1, int(output_w * self.preview_scale))
         preview_h = max(1, int(output_h * self.preview_scale))
 
@@ -1299,12 +1324,24 @@ class LiveVideoComposer:
 
             logger.info(f"Immagine caricata: {name} ({img_w}x{img_h}) zoom={fit_zoom}%")
 
+        except UnidentifiedImageError:
+            logger.warning(f"UnidentifiedImageError: {filepath}")
+            messagebox.showerror(t("dialog.error"), t("error.image_unsupported", Path(filepath).name))
+        except Image.DecompressionBombError:
+            logger.warning(f"DecompressionBombError: {filepath}")
+            messagebox.showerror(t("dialog.error"), t("error.image_too_large", Path(filepath).name))
+        except FileNotFoundError:
+            logger.warning(f"File not found: {filepath}")
+            messagebox.showerror(t("dialog.error"), t("error.image_not_found", Path(filepath).name))
+        except PermissionError:
+            logger.warning(f"Permission denied: {filepath}")
+            messagebox.showerror(t("dialog.error"), t("error.image_permission", Path(filepath).name))
+        except OSError as e:
+            logger.exception(f"OSError caricamento immagine {filepath}: {e}")
+            messagebox.showerror(t("dialog.error"), t("error.image_io", str(e)))
         except Exception as e:
-            err_msg = str(e)
-            if "cannot identify image file" in err_msg.lower() or "UnidentifiedImageError" in type(e).__name__:
-                err_msg = t("dialog.image_format_error")
-            logger.error(f"Errore caricamento immagine {filepath}: {e}")
-            messagebox.showerror(t("dialog.error"), t("dialog.load_error", Path(filepath).name, err_msg))
+            logger.exception(f"Errore caricamento immagine {filepath}: {e}")
+            messagebox.showerror(t("dialog.error"), t("dialog.load_error", Path(filepath).name, str(e)))
 
     def load_video(self, filepath):
         """Carica un video - salva il percorso e usa il primo frame come anteprima"""
@@ -1321,21 +1358,39 @@ class LiveVideoComposer:
 
             cap = cv2.VideoCapture(filepath)
             if not cap.isOpened():
-                raise Exception("Impossibile aprire il video")
+                logger.error(f"VideoCapture.isOpened() False: {filepath}")
+                messagebox.showerror(
+                    t("dialog.error"),
+                    t("error.video_cannot_open", Path(filepath).name)
+                )
+                return
+
+            # Metadata con guard
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            if fps is None or fps <= 0:
+                fps = 30.0  # Fallback sicuro
+            frame_count = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 1))
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+
+            if w <= 0 or h <= 0:
+                logger.error(f"Video con dimensioni non valide {w}x{h}: {filepath}")
+                messagebox.showerror(t("dialog.error"), t("error.video_invalid_dimensions"))
+                return
 
             ret, frame = cap.read()
-            if not ret:
-                raise Exception("Impossibile leggere il primo frame")
+            if not ret or frame is None:
+                logger.error(f"First frame read failed: {filepath}")
+                messagebox.showerror(
+                    t("dialog.error"),
+                    t("error.video_codec_missing", Path(filepath).name)
+                )
+                return
 
             # Converti BGR -> RGB -> PIL Image
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(frame_rgb)
 
-            # Ottieni info video
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            if fps <= 0:
-                fps = 30.0  # Fallback sicuro
-            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             duration = frame_count / fps if fps > 0 else 0
 
             cap.release()
@@ -1379,8 +1434,11 @@ class LiveVideoComposer:
 
             logger.info(f"Video caricato: {name} ({img_w}x{img_h}) {duration:.1f}s @ {fps:.0f}fps")
 
+        except cv2.error as e:
+            logger.exception(f"cv2.error in load_video: {filepath}")
+            messagebox.showerror(t("dialog.error"), t("error.video_cv2", str(e)))
         except Exception as e:
-            logger.error(f"Errore caricamento video {filepath}: {e}")
+            logger.exception(f"Errore caricamento video {filepath}: {e}")
             messagebox.showerror(t("dialog.error"), t("dialog.video_load_error", filepath, str(e)))
         finally:
             if cap is not None:
@@ -1814,8 +1872,10 @@ class LiveVideoComposer:
         output_w = max(1, self.output_width.get())
         output_h = max(1, self.output_height.get())
 
-        # Scala preview
-        self.preview_scale = min(canvas_w / output_w, canvas_h / output_h) * 0.9
+        # Scala preview (guard edge case: canvas_w/h = 0)
+        canvas_w_safe = max(1, canvas_w)
+        canvas_h_safe = max(1, canvas_h)
+        self.preview_scale = max(1e-6, min(canvas_w_safe / output_w, canvas_h_safe / output_h) * PREVIEW_SCALE_MARGIN)
         preview_w = max(1, int(output_w * self.preview_scale))
         preview_h = max(1, int(output_h * self.preview_scale))
 
@@ -2387,6 +2447,7 @@ class LiveVideoComposer:
         """Esporta video con tutte le trasformazioni applicate"""
         cap = None
         out = None
+        cancelled = False
         try:
             output_w = max(1, self.output_width.get())
             output_h = max(1, self.output_height.get())
@@ -2399,7 +2460,7 @@ class LiveVideoComposer:
             if not cap.isOpened():
                 raise Exception("Impossibile aprire il video sorgente")
 
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 1))
 
             # Pre-calcola trasformazioni costanti (snapshot thread-safe)
             needs_flip_h = video_layer.flip_h
@@ -2421,10 +2482,9 @@ class LiveVideoComposer:
                 # Per GIF: processa a blocchi per limitare uso memoria
                 frames = []
                 frame_count = 0
-                GIF_MAX_FRAMES = 3000  # Limite sicurezza memoria
-
-                while frame_count < GIF_MAX_FRAMES:
+                while frame_count < MAX_GIF_FRAMES:
                     if self._export_cancelled.is_set():
+                        cancelled = True
                         break
                     ret, frame = cap.read()
                     if not ret:
@@ -2482,6 +2542,7 @@ class LiveVideoComposer:
 
             while True:
                 if self._export_cancelled.is_set():
+                    cancelled = True
                     break
                 ret, frame = cap.read()
                 if not ret:
@@ -2501,13 +2562,18 @@ class LiveVideoComposer:
 
                 frame_count += 1
 
-                if frame_count % 30 == 0:
-                    progress_pct = int((frame_count / max(total_frames, 1)) * 100)
-                    self.root.after(0, lambda p=progress_pct:
-                                   self.info_label.config(text=t("export_video_progress", p)))
+                # Rilascio esplicito ogni 100 frame per video lunghi
+                if frame_count % 100 == 0:
+                    del pil_frame, processed, output_frame, frame_rgb
+                    gc.collect()
 
-            if self._export_cancelled.is_set():
-                logger.info(f"Export video annullato dopo {frame_count} frames")
+                if frame_count % 10 == 0:
+                    progress_pct = int((frame_count / total_frames) * 100)
+                    self.root.after(0, lambda p=progress_pct, fc=frame_count, tf=total_frames:
+                                   self.info_label.config(text=t("export_video_progress_frames", fc, tf, p)))
+
+            if cancelled:
+                logger.info(f"Export video annullato dall'utente al frame {frame_count}/{total_frames}")
                 self.root.after(0, self._stop_export)
                 self.root.after(0, lambda: self.info_label.config(text=t("export_cancelled")))
             else:
@@ -2517,15 +2583,35 @@ class LiveVideoComposer:
                 self.root.after(0, lambda: messagebox.showinfo(t("dialog.success"), t("dialog.video_saved", filepath, frame_count)))
 
         except Exception as ex:
-            logger.error(f"Errore export video: {ex}")
+            logger.exception(f"Errore export video: {ex}")
             self.root.after(0, self._stop_export)
             self.root.after(0, lambda: self.info_label.config(text=""))
             self.root.after(0, lambda err=str(ex): messagebox.showerror(t("dialog.error"), err))
         finally:
-            if cap is not None:
-                cap.release()
+            # Release risorse OpenCV (vincolo sacro #6)
             if out is not None:
-                out.release()
+                try:
+                    out.release()
+                except Exception:
+                    logger.exception("out.release() fallito")
+            if cap is not None:
+                try:
+                    cap.release()
+                except Exception:
+                    logger.exception("cap.release() fallito")
+            gc.collect()
+            # Rimuovi file parziale se l'export è stato cancellato
+            if cancelled and filepath and os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                    logger.info(f"File parziale rimosso: {filepath}")
+                except OSError as e:
+                    logger.warning(f"Impossibile rimuovere file parziale {filepath}: {e}")
+            # Stop export SEMPRE (evita progress bar bloccata su eccezione)
+            try:
+                self.root.after(0, self._stop_export)
+            except Exception:
+                pass
 
     def _process_video_frame_optimized(self, frame, output_w, output_h,
                                         flip_h, flip_v, rotation, zoom,
@@ -2575,14 +2661,32 @@ class LiveVideoComposer:
 def main():
     init_language()
     root = tk.Tk()
-    _app = LiveVideoComposer(root)  # noqa: F841
 
+    if _LICENSE_ENABLED:
+        # Build installer: mostra gate licenza prima dell'app principale.
+        # L'app viene avviata solo dopo conferma licenza valida.
+        root.withdraw()  # Nascondi la finestra principale durante il gate
+
+        def _start_app():
+            root.deiconify()
+            _center_window(root)
+            _app = LiveVideoComposer(root)  # noqa: F841
+
+        from license.gate import show_license_gate
+        show_license_gate(root, _start_app)
+    else:
+        # Build portable: avvio diretto senza gate licenza.
+        _app = LiveVideoComposer(root)  # noqa: F841
+        _center_window(root)
+
+    root.mainloop()
+
+
+def _center_window(root: tk.Tk) -> None:
     root.update_idletasks()
     x = (root.winfo_screenwidth() - root.winfo_width()) // 2
     y = (root.winfo_screenheight() - root.winfo_height()) // 2
     root.geometry(f"+{x}+{y}")
-
-    root.mainloop()
 
 
 if __name__ == "__main__":

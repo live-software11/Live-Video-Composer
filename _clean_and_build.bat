@@ -1,6 +1,10 @@
 @echo off
 echo ============================================
-echo   Live Video Composer v1.4.1 - Clean + Build
+echo   Live Video Composer v1.5.0 - Clean + Build
+echo ============================================
+echo.
+echo   INSTALLER = licenza Live Works attiva (gate al primo avvio)
+echo   PORTABLE  = libero, nessun gate licenza
 echo ============================================
 echo.
 
@@ -11,6 +15,13 @@ if %ERRORLEVEL% neq 0 (
     echo Assicurati che Python sia nel PATH
     pause
     exit /b 1
+)
+
+REM Installa dipendenze da requirements.txt
+echo --- Installo/aggiorno dipendenze ---
+pip install -r requirements.txt --quiet
+if %ERRORLEVEL% neq 0 (
+    echo [WARN] pip install fallito, alcune dipendenze potrebbero mancare
 )
 
 REM Check PyInstaller (usa python -m perche' pyinstaller potrebbe non essere nel PATH)
@@ -56,7 +67,9 @@ if exist "build" (
 echo.
 
 echo ============================================
-echo   1/2 - Build INSTALLER (cartella per Inno Setup)
+echo   1/3 - Build INSTALLER (con licenza Live Works)
+echo         License gate attivo: LIVEWORKS_LICENSE_ENABLED=true
+echo         Runtime hook: scripts\license_runtime_hook.py
 echo ============================================
 echo.
 
@@ -64,7 +77,7 @@ python -m PyInstaller Live_Video_Composer.spec --noconfirm --clean
 
 if %ERRORLEVEL% equ 0 (
     echo.
-    echo [OK] Versione Installer pronta
+    echo [OK] Versione Installer pronta (dist\Live_Video_Composer\)
 ) else (
     echo [ERRORE] Build Installer fallita!
     pause
@@ -73,7 +86,8 @@ if %ERRORLEVEL% equ 0 (
 
 echo.
 echo ============================================
-echo   2/2 - Build PORTABLE (singolo .exe)
+echo   2/3 - Build PORTABLE (singolo .exe, SENZA licenza)
+echo         Avvio diretto, nessun gate attivazione
 echo ============================================
 echo.
 
@@ -81,7 +95,7 @@ python -m PyInstaller Live_Video_Composer_Portable.spec --noconfirm --clean
 
 if %ERRORLEVEL% equ 0 (
     echo.
-    echo [OK] Versione Portable pronta
+    echo [OK] Versione Portable pronta (dist\Live_Video_Composer_Portable.exe)
 ) else (
     echo [ERRORE] Build Portable fallita!
     pause
@@ -91,6 +105,7 @@ if %ERRORLEVEL% equ 0 (
 echo.
 echo ============================================
 echo   3/3 - Build SETUP (Inno Setup)
+echo         Include l'exe Installer con licenza
 echo ============================================
 echo.
 
@@ -116,6 +131,7 @@ echo Copia output in release\...
 if not exist "release" mkdir release
 if exist "dist\Live_Video_Composer_Portable.exe" (
     copy /y "dist\Live_Video_Composer_Portable.exe" "release\Live_Video_Composer_Portable.exe" >nul
+    echo [OK] Portable copiato in release\
 )
 echo.
 echo ============================================
@@ -124,10 +140,13 @@ echo ============================================
 echo.
 echo Output in release\:
 if exist "release\Live_Video_Composer_Portable.exe" (
-    for %%F in ("release\Live_Video_Composer_Portable.exe") do echo    Live_Video_Composer_Portable.exe  [%%~zF bytes]
+    for %%F in ("release\Live_Video_Composer_Portable.exe") do echo    Live_Video_Composer_Portable.exe  [%%~zF bytes]  ^(SENZA licenza^)
 )
 if exist "release\Live_Video_Composer_Setup.exe" (
-    for %%F in ("release\Live_Video_Composer_Setup.exe") do echo    Live_Video_Composer_Setup.exe  [%%~zF bytes]
+    for %%F in ("release\Live_Video_Composer_Setup.exe") do echo    Live_Video_Composer_Setup.exe     [%%~zF bytes]  ^(CON licenza Live Works^)
 )
+echo.
+echo NOTA: Solo la versione Setup include il gate licenza Live Works.
+echo       La versione Portable e' libera e non richiede attivazione.
 echo.
 pause

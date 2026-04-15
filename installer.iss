@@ -3,16 +3,17 @@
 ; Richiede Inno Setup: https://jrsoftware.org/isinfo.php
 
 #define MyAppName "Live Video Composer"
-#define MyAppVersion "1.4.1"
+#define MyAppVersion "1.5.0"
 #define MyAppPublisher "Live Software"
-#define MyAppURL "https://github.com/live-software11/Live-Video-Composer"
+#define MyAppURL "https://www.liveworksapp.com"
 #define MyAppExeName "Live_Video_Composer.exe"
 
 [Setup]
-; Identificatore unico applicazione
+; Identificatore unico applicazione (NON modificare: usato per upgrade in-place)
 AppId={{A8B7C6D5-E4F3-2A1B-0C9D-8E7F6A5B4C3D}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -36,11 +37,15 @@ WizardSmallImageFile=installer-wizard-small.bmp
 MinVersion=10.0
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; Aspetto moderno (dark da immagini wizard installer-wizard.bmp)
+; Aspetto moderno
 WizardStyle=modern
 ; Permessi
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
+; Upgrade: chiudi app se in esecuzione, consenti downgrade
+CloseApplications=force
+CloseApplicationsFilter=*.exe
+RestartApplications=no
 
 [Languages]
 ; Lingua ufficiale: Inglese (i18n-installer.mdc)
@@ -49,7 +54,6 @@ Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
 
 [Files]
 ; Copia tutti i file dalla cartella dist/Live_Video_Composer
@@ -61,10 +65,23 @@ Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: quicklaunchicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[UninstallRun]
+; Deattiva la licenza Live Works prima della rimozione (best-effort, timeout 30s)
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--deactivate"; RunOnceId: "DeactivateLicense"; Flags: waituntilterminated; StatusMsg: "Deactivating license..."
+
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+
+[Code]
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  Result := '';
+  { Kill running instance before upgrade }
+  Exec('taskkill', '/F /IM {#MyAppExeName} /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;

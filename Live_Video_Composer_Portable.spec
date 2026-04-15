@@ -1,6 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Live Video Composer — Versione Portable (onefile = singolo .exe)
+# Live Video Composer — Versione Portable (onefile = singolo .exe) SENZA licenza
 # Build: python -m PyInstaller Live_Video_Composer_Portable.spec --noconfirm --clean
+#
+# Questa build NON include il modulo license/ e NON imposta LIVEWORKS_LICENSE_ENABLED.
+# L'app si avvia direttamente senza gate licenza (versione portable libera).
+# La versione installer (Live_Video_Composer.spec) include il modulo licenza.
 
 from PyInstaller.utils.hooks import collect_all
 
@@ -20,14 +24,27 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 a = Analysis(
     ['main.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
-    excludes=['matplotlib', 'scipy', 'pandas', 'pytest', 'setuptools', 'wheel', 'pip'],
+    runtime_hooks=[],  # Nessun runtime hook → LIVEWORKS_LICENSE_ENABLED rimane non impostato
+    excludes=[
+        'matplotlib', 'scipy', 'pandas', 'pytest', 'sphinx',
+        'tkinter.test', 'test', 'unittest', 'setuptools', 'wheel', 'pip',
+        'IPython', 'notebook',
+        # Escludi esplicitamente il modulo licenza dalla build portable
+        'license',
+        'license.fingerprint',
+        'license.manager',
+        'license.storage',
+        'license.gate',
+        'wmi',
+        'cryptography',
+        'cryptography.fernet',
+    ],
     noarchive=False,
     optimize=2,
 )

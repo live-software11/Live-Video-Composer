@@ -29,6 +29,7 @@
 **Live Video Composer** è un'applicazione desktop **Python/Tkinter** per la creazione di collage multi-layer con immagini e video. L'utente trascina file, applica trasformazioni e esporta a risoluzioni professionali.
 
 **Funzionalità principali:**
+
 - **Multi-Layer Collage** — immagini sovrapposte con ordine modificabile
 - **Trasformazioni** — zoom 1-1000%, rotazione -180/+180°, flip H/V, posizione pixel-perfect
 - **Handle visivi** — ridimensiona e ruota con handle stile PowerPoint
@@ -66,25 +67,25 @@
 
 ## 2. STACK TECNOLOGICO
 
-| Tecnologia | Versione | Ruolo |
-|---|---|---|
-| **Python** | 3.10+ (testato 3.13) | Runtime — Pillow 12 richiede >=3.10 |
-| **Tkinter** | stdlib | GUI |
-| **Pillow (PIL)** | >=12.1.1,<13 | Elaborazione immagini (12.1.1 security fix) |
-| **OpenCV** | opencv-python-headless >=4.13.0.92 | Elaborazione video |
-| **numpy** | >=1.26.0 | Array per video |
-| **windnd** | >=1.0.7 | Drag & drop nativo Windows |
-| **PyInstaller** | >=6.11 | Build eseguibile |
-| **Inno Setup** | 6 | Installer Windows |
-| **requests** | >=2.32.0 | HTTP client sistema licenze (solo installer build) |
-| **cryptography** | >=44.0.0 | Storage licenza cifrato Fernet (solo installer build) |
-| **wmi** | >=1.5.1 | Fingerprint hardware Windows (solo installer build) |
+| Tecnologia       | Versione                           | Ruolo                                                 |
+| ---------------- | ---------------------------------- | ----------------------------------------------------- |
+| **Python**       | 3.10+ (testato 3.13)               | Runtime — Pillow 12 richiede >=3.10                   |
+| **Tkinter**      | stdlib                             | GUI                                                   |
+| **Pillow (PIL)** | >=12.1.1,<13                       | Elaborazione immagini (12.1.1 security fix)           |
+| **OpenCV**       | opencv-python-headless >=4.13.0.92 | Elaborazione video                                    |
+| **numpy**        | >=1.26.0                           | Array per video                                       |
+| **windnd**       | >=1.0.7                            | Drag & drop nativo Windows                            |
+| **PyInstaller**  | >=6.11                             | Build eseguibile                                      |
+| **Inno Setup**   | 6                                  | Installer Windows                                     |
+| **requests**     | >=2.32.0                           | HTTP client sistema licenze (solo installer build)    |
+| **cryptography** | >=44.0.0                           | Storage licenza cifrato Fernet (solo installer build) |
+| **wmi**          | >=1.5.1                            | Fingerprint hardware Windows (solo installer build)   |
 
 ### Linguaggi e LOC
 
-| Linguaggio | Dove | LOC appross. |
-|---|---|---|
-| **Python** | `main.py` | ~2790 |
+| Linguaggio | Dove       | LOC appross.               |
+| ---------- | ---------- | -------------------------- |
+| **Python** | `main.py`  | ~2790                      |
 | **Python** | `license/` | ~790 (modulo gate licenze) |
 
 ---
@@ -93,16 +94,16 @@
 
 ### requirements.txt
 
-| Pacchetto | Versione | Funzione |
-|---|---|---|
-| Pillow | >=12.1.1,<13 | Immagini, resize, composite (12.1.1 security fix) |
-| opencv-python-headless | >=4.13.0.92 | Video capture, export MP4/GIF |
-| numpy | >=1.26.0 | Array per cv2 |
-| windnd | >=1.0.7 | Drag & drop (hook Python) |
-| tkinterdnd2 | >=0.4.3 | Fallback D&D (opzionale) |
-| requests | >=2.32.0 | HTTP client API Live Works (solo installer build) |
-| cryptography | >=44.0.0 | Storage licenza cifrato (solo installer build) |
-| wmi | >=1.5.1 | Fingerprint hardware (solo installer build) |
+| Pacchetto              | Versione     | Funzione                                          |
+| ---------------------- | ------------ | ------------------------------------------------- |
+| Pillow                 | >=12.1.1,<13 | Immagini, resize, composite (12.1.1 security fix) |
+| opencv-python-headless | >=4.13.0.92  | Video capture, export MP4/GIF                     |
+| numpy                  | >=1.26.0     | Array per cv2                                     |
+| windnd                 | >=1.0.7      | Drag & drop (hook Python)                         |
+| tkinterdnd2            | >=0.4.3      | Fallback D&D (opzionale)                          |
+| requests               | >=2.32.0     | HTTP client API Live Works (solo installer build) |
+| cryptography           | >=44.0.0     | Storage licenza cifrato (solo installer build)    |
+| wmi                    | >=1.5.1      | Fingerprint hardware (solo installer build)       |
 
 **Nota:** `opencv-python-headless` espone `cv2` con la stessa API di `opencv-python`, ma ~50MB in meno e nessuna dipendenza Qt.
 
@@ -151,11 +152,11 @@ Live video composer/
 
 ### Percorsi eseguibile
 
-| Tipo | Percorso |
-|---|---|
-| **Exe portable** | `release/Live_Video_Composer_Portable.exe` |
-| **Setup installer** | `release/Live_Video_Composer_Setup.exe` |
-| **Log** | `%LOCALAPPDATA%\LiveVideoComposer\live_video_composer.log` |
+| Tipo                | Percorso                                                   |
+| ------------------- | ---------------------------------------------------------- |
+| **Exe portable**    | `release/Live_Video_Composer_Portable.exe`                 |
+| **Setup installer** | `release/Live_Video_Composer_Setup.exe`                    |
+| **Log**             | `%LOCALAPPDATA%\LiveVideoComposer\live_video_composer.log` |
 
 ---
 
@@ -192,32 +193,32 @@ Live video composer/
 
 ### main.py — Struttura
 
-| Sezione | Righe | Contenuto |
-|---|---|---|
-| Imports, logging, costanti | 1-77 | _get_log_path, logger, IMAGE_FORMATS, VIDEO_FORMATS, RESOLUTION_PRESETS |
-| ImageLayer | 80-183 | __slots__, get_transformed_image, invalidate_cache, cleanup |
-| LiveVideoComposer.__init__ | 185-260 | Stato, setup_style, create_widgets, setup_bindings, setup_drag_and_drop |
-| setup_style | 261-378 | Tema dark blue, palette, stili ttk |
-| create_widgets | 380-771 | create_left_panel, create_canvas_panel, create_right_panel |
-| setup_drag_and_drop | 810-920 | windnd, tkinterdnd2 fallback, _process_dropped_files |
-| load_image, load_video | 1080-1235 | Downscale working copy, _original_path |
-| Layer management | 1237-1420 | add, remove, move, duplicate, fit_* |
-| Trasformazioni | 1420-1495 | zoom, rotation, position, flip |
-| Canvas rendering | 1545-1750 | get_layer_bounds, create_composite_image, _redraw_canvas_internal |
-| Mouse/Keyboard | 1750-2070 | on_mouse_down/move/up, on_closing |
-| Export | 2095-2410 | export_image/video, _do_export_*, _process_video_frame_optimized |
-| main() | 2420-2435 | Entry point |
+| Sezione                    | Righe     | Contenuto                                                                |
+| -------------------------- | --------- | ------------------------------------------------------------------------ |
+| Imports, logging, costanti | 1-77      | \_get_log_path, logger, IMAGE_FORMATS, VIDEO_FORMATS, RESOLUTION_PRESETS |
+| ImageLayer                 | 80-183    | **slots**, get_transformed_image, invalidate_cache, cleanup              |
+| LiveVideoComposer.**init** | 185-260   | Stato, setup_style, create_widgets, setup_bindings, setup_drag_and_drop  |
+| setup_style                | 261-378   | Tema dark blue, palette, stili ttk                                       |
+| create_widgets             | 380-771   | create_left_panel, create_canvas_panel, create_right_panel               |
+| setup_drag_and_drop        | 810-920   | windnd, tkinterdnd2 fallback, \_process_dropped_files                    |
+| load_image, load_video     | 1080-1235 | Downscale working copy, \_original_path                                  |
+| Layer management           | 1237-1420 | add, remove, move, duplicate, fit\_\*                                    |
+| Trasformazioni             | 1420-1495 | zoom, rotation, position, flip                                           |
+| Canvas rendering           | 1545-1750 | get_layer_bounds, create_composite_image, \_redraw_canvas_internal       |
+| Mouse/Keyboard             | 1750-2070 | on_mouse_down/move/up, on_closing                                        |
+| Export                     | 2095-2410 | export*image/video, \_do_export*\*, \_process_video_frame_optimized      |
+| main()                     | 2420-2435 | Entry point                                                              |
 
 ### Funzioni chiave
 
-| Funzione | Descrizione |
-|---|---|
-| `ImageLayer.get_transformed_image(use_cache, zoom, fast_mode)` | Restituisce immagine trasformata. fast_mode=True usa NEAREST (drag). |
-| `create_composite_image(output_w, output_h, for_export, target_size)` | Composita tutti i layer. target_size per preview, for_export per LANCZOS. |
-| `load_image(filepath)` | Carica immagine, downscale se >2× output, salva _original_path. |
-| `_do_export_image(filepath)` | Ricarica originali da _original_path, composita, salva, ripristina. |
-| `_process_dropped_files(files)` | Valida dimensione/formato, chiama load_image/load_video. |
-| `on_closing()` | WM_DELETE_WINDOW: _export_cancelled.set(), cleanup layer, root.destroy(). |
+| Funzione                                                              | Descrizione                                                                |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `ImageLayer.get_transformed_image(use_cache, zoom, fast_mode)`        | Restituisce immagine trasformata. fast_mode=True usa NEAREST (drag).       |
+| `create_composite_image(output_w, output_h, for_export, target_size)` | Composita tutti i layer. target_size per preview, for_export per LANCZOS.  |
+| `load_image(filepath)`                                                | Carica immagine, downscale se >2× output, salva \_original_path.           |
+| `_do_export_image(filepath)`                                          | Ricarica originali da \_original_path, composita, salva, ripristina.       |
+| `_process_dropped_files(files)`                                       | Valida dimensione/formato, chiama load_image/load_video.                   |
+| `on_closing()`                                                        | WM_DELETE_WINDOW: \_export_cancelled.set(), cleanup layer, root.destroy(). |
 
 ---
 
@@ -313,7 +314,7 @@ export_video() → _start_export() → Thread: _do_export_video()
 - Setup ritardato 500ms: `root.after(500, _do_setup_drag_and_drop)`
 - `_on_drop_windnd(files)` decodifica bytes (utf-8/cp1252), chiama `_process_dropped_files`
 
-### Validazione _process_dropped_files
+### Validazione \_process_dropped_files
 
 - File esistente, estensione in IMAGE_FORMATS/VIDEO_FORMATS
 - Dimensione: warning se >500MB (immagine) o >4GB (video)
@@ -331,7 +332,7 @@ export_video() → _start_export() → Thread: _do_export_video()
 1. **windnd** — Hook Python, collect_all('windnd') obbligatorio in spec
 2. **Setup D&D 500ms** — root.after(500, ...)
 3. **Log %LOCALAPPDATA%** — Mai nella cartella exe
-4. **Export in thread** — _start_export, _stop_export, root.after(0, ...) per GUI
+4. **Export in thread** — \_start_export, \_stop_export, root.after(0, ...) per GUI
 5. **cv2.VideoCapture** — Sempre cap.release() nel finally
 6. **GIF max 3000 frame** — Limite memoria
 7. **Division-by-zero** — max(1, output_w/h), max(1, fps), max(1, img_w/h)
@@ -344,8 +345,8 @@ export_video() → _start_export() → Thread: _do_export_video()
 ## 12. COMANDI BUILD E WORKFLOW
 
 ```powershell
-python main.py                    # Avvio sviluppo
-pip install -r requirements.txt   # Dipendenze
+python main.py                         # Avvio sviluppo
+python -m pip install -r requirements.txt   # Dipendenze (stesso interpreter)
 
 # Build
 python -m PyInstaller Live_Video_Composer.spec --noconfirm --clean       # Installer (onedir)
@@ -355,27 +356,31 @@ python -m PyInstaller Live_Video_Composer_Portable.spec --noconfirm --clean  # P
 _clean_and_build.bat              # clean + installer + portable + Inno Setup
 ```
 
+**Nota batch (IT):** `_clean_and_build.bat` esegue `cd /d "%~dp0"` all'avvio così la build funziona anche da collegamento, da prompt con directory diversa o dopo "Esegui come amministratore" (altrimenti la cwd poteva essere `System32` e PyInstaller non trovava `main.py` / `license` / `requirements.txt`). Controlli su `rmdir dist`/`build` se file in uso, dipendenze con `python -m pip`, esito PyInstaller/Inno con `if errorlevel 1`.
+
+**Batch note (EN):** `_clean_and_build.bat` runs `cd /d "%~dp0"` at start so the full build works from shortcuts, a shell opened in another folder, or after "Run as administrator" (otherwise the working directory could be `System32` and PyInstaller would not find `main.py`, `license/`, or `requirements.txt`). It also validates removal of `dist`/`build` when files are locked, uses `python -m pip` for installs, and uses `if errorlevel 1` after PyInstaller/Inno Setup.
+
 ### Output
 
-| File | Percorso |
-|---|---|
+| File     | Percorso                                   |
+| -------- | ------------------------------------------ |
 | Portable | `release/Live_Video_Composer_Portable.exe` |
-| Setup | `release/Live_Video_Composer_Setup.exe` |
+| Setup    | `release/Live_Video_Composer_Setup.exe`    |
 
 ---
 
 ## 13. OTTIMIZZAZIONI IMPLEMENTATE
 
-| # | Ottimizzazione | Impatto |
-|---|---|---|
-| 1 | Compositing target_size preview | 5-10x redraw |
-| 2 | Debounce 16/33ms (mai bypass) | UI fluida |
-| 3 | _cached_canvas_size | -5-15ms/frame |
-| 4 | Cache zoom (_zoom_cache) | Pan fluido |
-| 5 | _canvas_persistent_ids | -1-3ms/frame |
-| 6 | Downscale working copy | RAM, velocità |
-| 7 | fast_mode NEAREST durante drag | 3-4x rotation/resize |
-| 8 | opencv-python-headless | ~50MB build in meno |
+| #   | Ottimizzazione                  | Impatto              |
+| --- | ------------------------------- | -------------------- |
+| 1   | Compositing target_size preview | 5-10x redraw         |
+| 2   | Debounce 16/33ms (mai bypass)   | UI fluida            |
+| 3   | \_cached_canvas_size            | -5-15ms/frame        |
+| 4   | Cache zoom (\_zoom_cache)       | Pan fluido           |
+| 5   | \_canvas_persistent_ids         | -1-3ms/frame         |
+| 6   | Downscale working copy          | RAM, velocità        |
+| 7   | fast_mode NEAREST durante drag  | 3-4x rotation/resize |
+| 8   | opencv-python-headless          | ~50MB build in meno  |
 
 Dettaglio storico in `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.md`.
 
@@ -384,6 +389,7 @@ Dettaglio storico in `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.m
 ## 14. CHANGELOG
 
 ### v1.4.2 (2026-04-15) — TASK BATCH 2026-04-15
+
 - **Runtime** — Guard `sys.version_info < (3, 10)` in cima a `main.py`; stack bumpato a Pillow >=12.1.1,<13 (CVE-2026-25990 + fix 12.1.1) e opencv-python-headless >=4.13.0.92.
 - **Stabilità export** — `_do_export_video` pulisce file parziale su cancel, `gc.collect()` in finally, release OpenCV in try/except, `_stop_export` SEMPRE in finally (anche su eccezione). Stesso pattern applicato a `_do_export_image`.
 - **Thread safety export** — Introdotto `_build_export_snapshot()` + `_create_composite_from_snapshot()`: l'export legge parametri congelati all'avvio, modifiche concorrenti ai layer non corrompono l'output (TASK-008).
@@ -395,22 +401,27 @@ Dettaglio storico in `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.m
 - **Magic numbers** — Costanti centralizzate: `MAX_GIF_FRAMES=3000`, `DOWNSCALE_THRESHOLD=2.0`, `DND_SETUP_DELAY_MS=500`, `DEBOUNCE_NORMAL_MS=16`, `DEBOUNCE_DRAG_MS=33`, `PREVIEW_SCALE_MARGIN=0.9`.
 - **Type hints** — `from __future__ import annotations` + annotazioni su `ImageLayer`, `load_image`, `load_video`, `create_composite_image`, `get_transformed_image`.
 - **PyInstaller** — `.spec` Installer e Portable: `excludes` estesi (sphinx, tkinter.test, unittest, IPython, notebook); Portable esclude esplicitamente il modulo `license` e le sue dipendenze runtime; Installer mantiene `collect_all('windnd')` e include il modulo `license` con runtime hook.
+- **Build script** — `_clean_and_build.bat`: `cd /d "%~dp0"`, verifica presenza `main.py`, uscita controllata se `dist`/`build` non eliminabili, `python -m pip`, `if errorlevel 1` dopo PyInstaller e Inno Setup (fix cwd errata e errorlevel in batch).
 - **i18n** — Aggiunte 10 chiavi in IT/EN: `error.image_unsupported`, `error.image_too_large`, `error.image_not_found`, `error.image_permission`, `error.image_io`, `error.video_cannot_open`, `error.video_codec_missing`, `error.video_invalid_dimensions`, `error.video_cv2`, `export_video_progress_frames`.
 
 ### v1.4.1 (2026-03-18)
+
 - **Stack aggiornato** — Python 3.10+ (Pillow 12 richiede), Pillow >=12.1.1,<13 (CVE-2026-25990 + security fix 12.1.1), opencv-python-headless >=4.13.0.92, numpy >=1.26.0, tkinterdnd2 >=0.4.3, PyInstaller >=6.11. Runtime: `requests >=2.32`, `cryptography >=44`, `wmi >=1.5` per sistema licenze (solo installer).
 - **Documentazione** — README, ARCHITETTURA, System_Prompt, Cursor rules allineate
 
 ### v1.4.0 (2026-03-18)
+
 - Rename LiveVideoComposer, log LiveVideoComposer/
-- Downscale working copy, _original_path, reload export
+- Downscale working copy, \_original_path, reload export
 - fast_mode NEAREST durante drag
 - opencv-python-headless
 - WM_DELETE_WINDOW, export cancellabile
 - Validazione D&D, guard division-by-zero
 
 ### v1.3.1 (2026-02-11)
+
 - Fix D&D portable, log %LOCALAPPDATA%, build scripts
 
 ### v1.3.0 (2026-02-11)
+
 - Logging, gestione errori, export GIF ottimizzato, cursor rules

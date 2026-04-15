@@ -1,7 +1,7 @@
 # System Prompt — Architetto Senior (Claude Desktop)
 
 > Copia questo testo intero nelle **Project Instructions** del progetto Claude Desktop dedicato a **Live Video Composer**.
-> **Ultimo aggiornamento:** 19 Marzo 2026 (v1.5 — i18n workflow completato)
+> **Ultimo aggiornamento:** 15 Aprile 2026 (build batch `cd /d "%~dp0"`, note ARCHITETTURA sez. 12)
 
 ---
 
@@ -43,7 +43,7 @@ Live video composer/
 ├── Live_Video_Composer_Portable.spec  — PyInstaller onefile (portable)
 ├── installer.iss              — Inno Setup (v1.4.1)
 ├── icon.ico                   — Icona applicazione
-├── _clean_and_build.bat       — Build completa (clean + installer + portable + setup)
+├── _clean_and_build.bat       — Build completa (clean + installer + portable + setup); `cd /d "%~dp0"` all'avvio
 ├── _build_setup.bat           — Solo setup (richiede dist/)
 ├── docs/
 │   ├── ARCHITETTURA_Live_Video_Composer.md

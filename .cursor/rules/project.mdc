@@ -46,7 +46,7 @@ Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita i
 - `localization.py` - Dizionari i18n (it/en), funzione t()
 - `docs/` - ARCHITETTURA, Istruzioni_Progetto_Claude, Primo_Prompt, BugFix_Refactor, README (vendita IT/EN)
 - `release/` - Output build (Portable.exe, Setup.exe)
-- `_clean_and_build.bat` - Build completa (installer+portable+setup). `_build_setup.bat` - Solo setup (richiede dist/Live_Video_Composer/)
+- `_clean_and_build.bat` - Build completa (installer+portable+setup); usa `cd /d "%~dp0"` all'avvio. `_build_setup.bat` - Solo setup (richiede dist/Live_Video_Composer/)
 - `icon.ico` - Obbligatorio in root per spec
 - `.gitignore`: _*.bat, _*.py eccetto _build_setup, _clean_and_build
 

@@ -184,10 +184,10 @@ Il drag & drop non funziona se l'applicazione viene eseguita "come Amministrator
 
 ## Build da sorgente (sviluppatori)
 
-Da PowerShell o CMD nella root del progetto (Windows, Python 3.10+):
+Windows, Python 3.10+.
 
-1. `pip install -r requirements.txt`
-2. Esegui **`_clean_and_build.bat`** — genera la cartella `dist/`, il setup Inno Setup in `release/Live_Video_Composer_Setup.exe` (con gate licenza) e copia `release/Live_Video_Composer_Portable.exe` (senza gate).
+1. `python -m pip install -r requirements.txt` (dalla root del repo, oppure dopo `cd` nella cartella del progetto).
+2. Esegui **`_clean_and_build.bat`** (doppio clic va bene): lo script imposta automaticamente la cartella del file (`cd /d "%~dp0"`), così la build funziona anche da collegamento, da prompt aperto altrove o dopo "Esegui come amministratore". Genera `dist/`, il setup in `release/Live_Video_Composer_Setup.exe` (con gate licenza) e copia `release/Live_Video_Composer_Portable.exe` (senza gate). Se `dist` non si elimina, chiudi eventuali `Live_Video_Composer.exe` in esecuzione dalla cartella `dist`.
 
 Richiede [PyInstaller](https://pyinstaller.org/) e, per il setup, [Inno Setup 6](https://jrsoftware.org/isinfo.php).
 

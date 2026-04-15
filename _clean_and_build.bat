@@ -1,4 +1,15 @@
 @echo off
+setlocal EnableExtensions
+REM Sempre nella cartella dello script (collegamenti, "Esegui come amministratore", prompt con altra cwd)
+cd /d "%~dp0"
+if not exist "main.py" (
+    echo ERRORE: main.py non trovato. La cartella di lavoro non e' quella del progetto.
+    echo Cartella attesa: %~dp0
+    echo Cartella corrente:  %CD%
+    pause
+    exit /b 1
+)
+
 echo ============================================
 echo   Live Video Composer v1.5.0 - Clean + Build
 echo ============================================
@@ -7,10 +18,12 @@ echo   INSTALLER = licenza Live Works attiva (gate al primo avvio)
 echo   PORTABLE  = libero, nessun gate licenza
 echo ============================================
 echo.
+echo Cartella progetto: %CD%
+echo.
 
 REM Check Python
 python --version
-if %ERRORLEVEL% neq 0 (
+if errorlevel 1 (
     echo ERRORE: Python non trovato!
     echo Assicurati che Python sia nel PATH
     pause
@@ -19,23 +32,23 @@ if %ERRORLEVEL% neq 0 (
 
 REM Installa dipendenze da requirements.txt
 echo --- Installo/aggiorno dipendenze ---
-pip install -r requirements.txt --quiet
-if %ERRORLEVEL% neq 0 (
+python -m pip install -r requirements.txt --quiet
+if errorlevel 1 (
     echo [WARN] pip install fallito, alcune dipendenze potrebbero mancare
 )
 
 REM Check PyInstaller (usa python -m perche' pyinstaller potrebbe non essere nel PATH)
 python -m PyInstaller --version
-if %ERRORLEVEL% neq 0 (
+if errorlevel 1 (
     echo PyInstaller non trovato, installo...
-    pip install pyinstaller
+    python -m pip install pyinstaller
 )
 
 echo.
 echo --- Genera icon.ico e grafiche wizard (se mancanti) ---
 if not exist "icon.ico" (
     python scripts\create-icon.py
-    if %ERRORLEVEL% neq 0 (
+    if errorlevel 1 (
         echo [ERRORE] Creazione icon.ico fallita. Verifica icons\icona Live Video Composer.jpg
         pause
         exit /b 1
@@ -45,7 +58,7 @@ if not exist "icon.ico" (
 )
 if not exist "installer-wizard.bmp" (
     python scripts\create-installer-wizard.py
-    if %ERRORLEVEL% neq 0 (
+    if errorlevel 1 (
         echo [ERRORE] Creazione grafiche wizard fallita
         pause
         exit /b 1
@@ -57,11 +70,21 @@ if not exist "installer-wizard.bmp" (
 echo.
 echo --- Pulizia vecchie build ---
 if exist "dist" (
-    rmdir /s /q dist
+    rmdir /s /q dist 2>nul
+    if exist "dist" (
+        echo [ERRORE] Impossibile eliminare dist\ - chiudi Live_Video_Composer.exe o antivirus in uso.
+        pause
+        exit /b 1
+    )
     echo [OK] Cartella dist rimossa
 )
 if exist "build" (
-    rmdir /s /q build
+    rmdir /s /q build 2>nul
+    if exist "build" (
+        echo [ERRORE] Impossibile eliminare build\ — file in uso.
+        pause
+        exit /b 1
+    )
     echo [OK] Cartella build rimossa
 )
 echo.
@@ -74,15 +97,13 @@ echo ============================================
 echo.
 
 python -m PyInstaller Live_Video_Composer.spec --noconfirm --clean
-
-if %ERRORLEVEL% equ 0 (
-    echo.
-    echo [OK] Versione Installer pronta (dist\Live_Video_Composer\)
-) else (
-    echo [ERRORE] Build Installer fallita!
+if errorlevel 1 (
+    echo [ERRORE] Build Installer fallita! Controlla i messaggi PyInstaller sopra.
     pause
     exit /b 1
 )
+echo.
+echo [OK] Versione Installer pronta (dist\Live_Video_Composer\)
 
 echo.
 echo ============================================
@@ -92,15 +113,13 @@ echo ============================================
 echo.
 
 python -m PyInstaller Live_Video_Composer_Portable.spec --noconfirm --clean
-
-if %ERRORLEVEL% equ 0 (
-    echo.
-    echo [OK] Versione Portable pronta (dist\Live_Video_Composer_Portable.exe)
-) else (
-    echo [ERRORE] Build Portable fallita!
+if errorlevel 1 (
+    echo [ERRORE] Build Portable fallita! Controlla i messaggi PyInstaller sopra.
     pause
     exit /b 1
 )
+echo.
+echo [OK] Versione Portable pronta (dist\Live_Video_Composer_Portable.exe)
 
 echo.
 echo ============================================
@@ -115,10 +134,10 @@ if exist "C:\Program Files\Inno Setup 6\ISCC.exe" set ISCC=C:\Program Files\Inno
 
 if defined ISCC (
     "%ISCC%" installer.iss
-    if %ERRORLEVEL% equ 0 (
-        echo [OK] Setup creato in release\Live_Video_Composer_Setup.exe
-    ) else (
+    if errorlevel 1 (
         echo [ERRORE] Compilazione Inno Setup fallita
+    ) else (
+        echo [OK] Setup creato in release\Live_Video_Composer_Setup.exe
     )
 ) else (
     echo Inno Setup non trovato. Compila manualmente:

@@ -4,10 +4,14 @@ Gestisce activate, verify, deactivate verso l'API Live Works,
 lo storage cifrato locale e il grace period offline.
 """
 
+import hashlib
+import hmac
 import json
 import logging
+import os
 import re
 import sys
+import time
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Any
@@ -99,11 +103,41 @@ def _offline_grace_ok(license_data: dict[str, Any]) -> bool:
     return now <= deadline
 
 
+# ─── T-04 App challenge (HMAC) — opzionale ───────────────────────────────────
+def _app_challenge_headers(hardware_fingerprint: str) -> dict[str, str]:
+    """
+    Se l'ambiente `LIVEWORKS_APP_CHALLENGE_SECRET` è impostata (>=16 char) e combacia con
+    `APP_CHALLENGE_SECRET_VIDEO_COMPOSER` su Cloud Functions, le richieste passano
+    con `APP_CHALLENGE_ENFORCED=true` sul backend. Se assente, nessun header (comportamento legacy).
+    """
+    raw = os.environ.get("LIVEWORKS_APP_CHALLENGE_SECRET", "").strip()
+    if len(raw) < 16:
+        return {}
+    ts = int(time.time() * 1000)
+    payload = f"{PRODUCT_ID}|{APP_VERSION}|{ts}|{hardware_fingerprint}"
+    sig = hmac.new(
+        raw.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+    return {
+        "X-App-Id": PRODUCT_ID,
+        "X-App-Version": APP_VERSION,
+        "X-App-Challenge-Ts": str(ts),
+        "X-App-Challenge": sig,
+    }
+
+
 # ─── API HTTP ─────────────────────────────────────────────────────────────────
-def _post(endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _post(
+    endpoint: str,
+    payload: dict[str, Any],
+    hardware_fingerprint: str,
+) -> dict[str, Any]:
     """POST a {API_BASE_URL}/{endpoint}. Lancia requests.RequestException su errori di rete."""
     url = f"{API_BASE_URL}/{endpoint}"
-    resp = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT_S)
+    headers = _app_challenge_headers(hardware_fingerprint)
+    resp = requests.post(
+        url, json=payload, timeout=REQUEST_TIMEOUT_S, headers=headers
+    )
     # L'API Live Works restituisce sempre JSON, anche per errori 4xx.
     # raise_for_status solo su 5xx (errore server reale).
     if resp.status_code >= 500:
@@ -173,7 +207,7 @@ def activate(license_key: str) -> dict[str, Any]:
         "appVersion": APP_VERSION,
     }
 
-    data = _post("activate", payload)
+    data = _post("activate", payload, fp)
 
     if data.get("success"):
         # Attivazione riuscita: salva licenza cifrata
@@ -223,7 +257,7 @@ def verify_online() -> dict[str, Any]:
         "appVersion": APP_VERSION,
     }
 
-    data = _post("verify", payload)
+    data = _post("verify", payload, fp)
 
     if data.get("valid"):
         # Aggiorna dati licenza locali
@@ -253,7 +287,7 @@ def _verify_pending(pending: dict[str, Any]) -> dict[str, Any]:
         "productId": PRODUCT_ID,
         "appVersion": APP_VERSION,
     }
-    data = _post("activate", payload)
+    data = _post("activate", payload, fp)
 
     if data.get("success"):
         license_data = {
@@ -294,7 +328,7 @@ def deactivate(reason: str) -> bool:
 
     success = False
     try:
-        data = _post("deactivate", payload)
+        data = _post("deactivate", payload, fp)
         success = data.get("success", False)
     except Exception as exc:
         logger.warning("Deactivate API call failed (best-effort): %s", exc)

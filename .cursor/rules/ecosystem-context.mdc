@@ -5,20 +5,28 @@ alwaysApply: true
 
 # Live Video Composer — Contesto Ecosistema
 
+> **Entry-point standard 2026:** [`AGENTS.md`](../../AGENTS.md) (root). Sezione §8 contiene la mappa completa progetti sorelle. **Sintesi Claude:** [`CLAUDE.md`](../../CLAUDE.md).
+
 ## Ruolo nell'ecosistema
 
-App desktop Python 3.9+ (Tkinter, Pillow, OpenCV). Nessun Firebase diretto. Sistema licenze via **Live WORKS APP**.
+App desktop Python **3.10+** (Tkinter, Pillow `>=12.1.1,<13`, OpenCV `headless >=4.13`). Nessun Firebase diretto. Sistema licenze via **Live WORKS APP**. **Nessun socket server aperto** (no HTTP/OSC/NDI): superficie di attacco rete = zero (a differenza delle altre 3 desktop dell'ecosistema).
 
 ## Licenze
 
 - **Piattaforma:** Live WORKS APP (`live-works-app` su Firebase Blaze, account `live.software11@gmail.com`)
+- **Repo backend:** `live-software11/live-works-app` (privato — gemello da consultare per modifiche al contratto API)
+- **API base URL:** `https://live-works-app.web.app/api`
+- **Product ID:** `video-composer` · AppData `%LOCALAPPDATA%\LiveVideoComposer\`
+- **Cifratura:** **Fernet (AES-128-CBC + HMAC-SHA256)** — diversa da AES-256-GCM delle altre 3 desktop. `license.enc` NON interscambiabile con Ledwall/Timer/Teleprompter.
 - **Vendita:** Lemon Squeezy (lifetime) — checkout linkato dal SITO www.liveworksapp.com
-- **Integrazione client:** Modulo licenza locale — vedi `docs/GUIDA_INTEGRAZIONE_LICENZA_APP.md`
+- **Integrazione client:** Modulo `license/` (incluso solo nello spec installer) — vedi `docs/GUIDA_INTEGRAZIONE_LICENZA_APP.md`
+- **T-04 HMAC App Challenge** (allineato 24/04/2026): header `X-App-*` opzionali su API. **Secret runtime env var** `LIVEWORKS_APP_CHALLENGE_SECRET` (≥16 char) ↔ backend `APP_CHALLENGE_SECRET_VIDEO_COMPOSER`. Differenza dalle altre 3 desktop: secret runtime invece di compile-time/build-time. Modalità lazy finché `APP_CHALLENGE_ENFORCED=true` non è attivato.
+- **Audit pre-vendita** (commit `739b889`): VERDE — vedi `docs/AUDIT_PRE_VENDITA.md`. DnD thread safety, fingerprint WMI strict, pending cifrato Fernet, `verify_before` enforcement.
 
 ## Account
 
-- **GitHub:** `live-software11` — `Live-Video-Composer`
-- **Firebase:** nessuno per questa app (backend = Python locale)
+- **GitHub:** `live-software11` — `Live-Video-Composer` (branch `master`)
+- **Firebase:** nessuno per questa app (backend = Live WORKS APP esterno via HTTPS)
 
 ## Progetti fratelli
 

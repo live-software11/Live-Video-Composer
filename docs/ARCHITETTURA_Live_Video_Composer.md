@@ -1,7 +1,9 @@
 # Live Video Composer — Documentazione Definitiva
 
-> **Versione:** 1.4.1 — 18/03/2026
-> **Scopo:** Documento unico di riferimento per sviluppo, manutenzione e preparazione alla vendita
+> **Versione:** 1.5.0 — 06/05/2026 (audit memoria a lungo termine: AGENTS.md + CLAUDE.md + docs/README.md; richiama audit pre-vendita + T-04 HMAC runtime env)
+> **Scopo:** Documento unico di riferimento per sviluppo, manutenzione e vendita commerciale.
+> **Entry-point AI agent:** [`AGENTS.md`](../AGENTS.md) (root) — standard 2026 per Cursor/Codex/Continue. [`CLAUDE.md`](../CLAUDE.md) sintesi viva per Claude Desktop.
+> **Indice docs:** [`docs/README.md`](./README.md).
 
 ---
 
@@ -387,6 +389,18 @@ Dettaglio storico in `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.m
 ---
 
 ## 14. CHANGELOG
+
+### v1.5.0 — audit memoria a lungo termine (2026-05-06)
+
+| #   | Voce                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Entry-point AI agent standard 2026.** Aggiunti file root `AGENTS.md` (Cursor/Codex/Continue) e `CLAUDE.md` (Claude Desktop/Code, sintesi viva). Nuovo indice `docs/README.md`. I file legacy `Istruzioni_Progetto_Claude_*` e `Primo_Prompt_*` restano per Claude Desktop ma `AGENTS.md` è la **prima fonte** per gli agenti automatici. Rules `ecosystem-context.mdc`, `doc-sync.mdc` aggiornate per puntare a `AGENTS.md` come prima fonte.                                                                                                                          |
+| 2   | **Audit pre-vendita chiuso (Aprile 2026, commit `739b889`).** Tutti i fix MEDIUM applicati: DnD thread safety (`windnd` callback ora usa `root.after(0, ...)`), fingerprint WMI strict (`RuntimeError` esplicito invece di `UNKNOWN_*` fallback), `verify_before` enforcement (rifiuto se assente invece di grace illimitato), pending cifrato Fernet (con fallback legacy clear-text). Verdetto: **VERDE — pronto per la vendita**. Surface attacco rete = **zero** (nessun socket server, a differenza delle altre 3 desktop). Dettaglio: `docs/AUDIT_PRE_VENDITA.md`. |
+| 3   | **T-04 LiveWorks App Challenge HMAC** (commit `ebf5513`, allineato con backend WORKS APP T-04 chiuso 24/04/2026). `license/manager.py::_app_challenge_headers` legge **runtime env var** `LIVEWORKS_APP_CHALLENGE_SECRET` (≥16 char, altrimenti nessun header) e calcola HMAC-SHA256 hex su `productId                                                                                                                                                                                                                                                                   | version | ts  | fingerprint`. Header emessi: `X-App-Id`(=`video-composer`), `X-App-Version`, `X-App-Challenge-Ts`(ms),`X-App-Challenge`. Backend match: `APP_CHALLENGE_SECRET_VIDEO_COMPOSER`su Cloud Functions. Modalità lazy: backend accetta richieste senza header finché`APP_CHALLENGE_ENFORCED=true`non è attivato. **Differenza dalle altre desktop:** secret runtime (env var) invece di compile-time/build-time (Rust`option_env!`/ .NET`AssemblyMetadata`). |
+
+**EN — Long-term memory audit + T-04 HMAC + pre-launch audit closed:** New 2026 AI-agent entry-points (`AGENTS.md`, `CLAUDE.md`, `docs/README.md`). All MEDIUM findings fixed (DnD thread safety, strict fingerprint, encrypted pending Fernet, `verify_before` enforcement). Optional HMAC App Challenge headers emitted at **runtime** from env var `LIVEWORKS_APP_CHALLENGE_SECRET`, mirroring backend secret `APP_CHALLENGE_SECRET_VIDEO_COMPOSER`. **No network attack surface** — unlike the other three desktop apps, Video Composer opens no listening socket.
+
+---
 
 ### v1.4.2 (2026-04-15) — TASK BATCH 2026-04-15
 

@@ -18,13 +18,16 @@ Il tuo interlocutore è l'imprenditore-owner del software. Lui ti porta problemi
 ## CONTESTO PROGETTO
 
 ### Cos'è
+
 Applicazione desktop **Python/Tkinter** per la creazione di collage multi-layer con immagini e video. L'utente trascina file, applica trasformazioni (zoom, rotazione, flip, posizione) e esporta:
+
 - **Immagine** — JPG, PNG, WebP, BMP con preset qualità (Bassa/Media/Alta)
 - **Video** — MP4, AVI, WebM, GIF animata con preset bitrate/CRF
 
 **Target utente:** Content creator, social media manager, tecnici AV per eventi live.
 
 ### Stack
+
 - **GUI:** Tkinter con tema dark blue custom (#0a1929)
 - **Python:** 3.10+ (testato su 3.13) — Pillow 12 richiede >=3.10
 - **Immagini:** Pillow (PIL) >=12.1.1,<13
@@ -62,18 +65,20 @@ Live video composer/
 ```
 
 ### Percorsi critici
-| Tipo | Percorso |
-|---|---|
-| Exe portable | `release/Live_Video_Composer_Portable.exe` |
-| Setup installer | `release/Live_Video_Composer_Setup.exe` |
-| Log | `%LOCALAPPDATA%\LiveVideoComposer\live_video_composer.log` |
-| Architettura | `docs/ARCHITETTURA_Live_Video_Composer.md` |
+
+| Tipo            | Percorso                                                   |
+| --------------- | ---------------------------------------------------------- |
+| Exe portable    | `release/Live_Video_Composer_Portable.exe`                 |
+| Setup installer | `release/Live_Video_Composer_Setup.exe`                    |
+| Log             | `%LOCALAPPDATA%\LiveVideoComposer\live_video_composer.log` |
+| Architettura    | `docs/ARCHITETTURA_Live_Video_Composer.md`                 |
 
 ---
 
 ## DATA MODEL (CRITICO)
 
 ### ImageLayer
+
 ```
 ImageLayer
 ├── id: str (uuid[:8])
@@ -93,6 +98,7 @@ ImageLayer
 ```
 
 ### LiveVideoComposer (stato principale)
+
 - `layers: list[ImageLayer]`, `selected_layer: ImageLayer | None`
 - `output_width`, `output_height`, `bg_color_var`
 - `_cached_canvas_size`, `_canvas_persistent_ids`, `_export_cancelled` (threading.Event)
@@ -103,15 +109,18 @@ ImageLayer
 ## LOGICA DI RENDERING (NON MODIFICARE SENZA PIANO)
 
 ### Compositing
+
 - **Preview:** `create_composite_image(..., target_size=(preview_w, preview_h))` — composita direttamente a risoluzione preview, evita resize 4K→preview
 - **Export:** `create_composite_image(..., for_export=True)` — LANCZOS, risoluzione piena
 - **Durante drag:** `get_transformed_image(..., fast_mode=True)` — NEAREST per rotation/resize (3-4x più veloce)
 
 ### Downscale working copy
+
 - Se immagine > 2× output: `load_image` crea working copy ridotta, salva `_original_path`
 - Export: `_do_export_image` ricarica da disco l'originale, sostituisce temporaneamente, poi ripristina
 
 ### Debounce
+
 - `redraw_canvas(immediate=False)` → `_schedule_redraw(16ms)` o `33ms` se `is_dragging`
 - Mai bypass del debounce durante drag
 
@@ -153,6 +162,7 @@ User click "ESPORTA IMMAGINE" / "ESPORTA VIDEO"
 ## COME PRODURRE UN TASK PER L'OPERAIO
 
 ### Formato Task REFACTOR
+
 ```
 [TASK-XXX] REFACTOR: <titolo breve>
 
@@ -175,6 +185,7 @@ TEST:
 ```
 
 ### Formato Task BUG FIX
+
 ```
 [TASK-XXX] BUG FIX: <titolo breve>
 
@@ -194,6 +205,7 @@ VINCOLI:
 ```
 
 ### Formato Task FEATURE
+
 ```
 [TASK-XXX] FEATURE: <titolo breve>
 
@@ -219,13 +231,14 @@ VINCOLI:
 ## SINCRONIZZAZIONE DOCUMENTAZIONE (SACRA)
 
 **Ogni modifica significativa al codice richiede l'aggiornamento di:**
+
 1. `docs/ARCHITETTURA_Live_Video_Composer.md`
 2. `.cursor/rules/` — project, build, main-py, doc-sync
 3. **Questo file** — se cambia contesto, vincoli, formato task
 
 **Regola i18n UI:** Ogni modifica alle stringhe in italiano (`localization.py` it) deve essere applicata anche in inglese (en). Terminologia EN professionale video/compositing/AV. Dettagli tecnici i18n in `docs/ARCHITETTURA_Live_Video_Composer.md` (vincolo #10).
 
-**Regola i18n Installer:** Installer Inno Setup in inglese. Primo avvio in inglese (_CURRENT_LANG = "en"). Lingua salvata in lang.json alla chiusura. Vedi `.cursor/rules/i18n-installer.mdc`. Grafiche installer: `.cursor/rules/installer-modern.mdc`.
+**Regola i18n Installer:** Installer Inno Setup in inglese. Primo avvio in inglese (\_CURRENT_LANG = "en"). Lingua salvata in lang.json alla chiusura. Vedi `.cursor/rules/i18n-installer.mdc`. Grafiche installer: `.cursor/rules/installer-modern.mdc`.
 
 Regola Cursor: `.cursor/rules/doc-sync.mdc` (alwaysApply). Nei task che toccano UI, specifica all'operaio di aggiornare localization.py (entrambe le lingue).
 

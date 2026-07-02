@@ -7,13 +7,15 @@ alwaysApply: true
 # Live Video Composer - Regole Progetto
 
 ## Regole per contesto
+
 - **project.mdc** (questo): sempre attivo
 - **doc-sync.mdc**: sempre attivo (sync documentazione a ogni modifica significativa)
 - **git-autonomy.mdc**: sempre attivo (commit/push)
-- **build.mdc**: quando si modificano *.spec, installer.iss, *.bat, build_exe.py
+- **build.mdc**: quando si modificano _.spec, installer.iss, _.bat, build_exe.py
 - **main-py.mdc**: quando si modifica main.py
 
 ## Comunicazione e Workflow
+
 - Rispondere SEMPRE in italiano, linguaggio chiaro
 - Formato risposta: Cosa ho fatto → File modificati → Comandi (se serve) → Attenzione (solo se breaking)
 - Se vedi errori nel codice: segnalarli PRIMA di procedere
@@ -21,9 +23,11 @@ alwaysApply: true
 - Dipendenza mancante: aggiungere a requirements.txt e avvisare
 
 ## Refactoring
+
 Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita impattate (3) Test consigliati. Se puo rompere produzione: chiedere conferma esplicita. Procedere per step incrementali.
 
 ## Architettura
+
 - Applicazione desktop Python/Tkinter single-file (`main.py`)
 - GUI: Tkinter con tema dark blue custom
 - Immagini: Pillow (PIL)
@@ -34,6 +38,7 @@ Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita i
 - Versione: 1.4.1
 
 ## Stack Tecnologico
+
 - Python 3.9+ (testato con 3.13)
 - Pillow >=12.1.0
 - opencv-python-headless >=4.10.0 (opzionale, ~50MB in meno di opencv-python)
@@ -42,26 +47,31 @@ Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita i
 - PyInstaller >=6.0 (build)
 
 ## Struttura
+
 - `main.py` - Sorgente unico (~2340 righe)
 - `localization.py` - Dizionari i18n (it/en), funzione t()
 - `docs/` - ARCHITETTURA, Istruzioni_Progetto_Claude, Primo_Prompt, BugFix_Refactor, README (vendita IT/EN)
 - `release/` - Output build (Portable.exe, Setup.exe)
 - `_clean_and_build.bat` - Build completa (installer+portable+setup); usa `cd /d "%~dp0"` all'avvio. `_build_setup.bat` - Solo setup (richiede dist/Live_Video_Composer/)
 - `icon.ico` - Obbligatorio in root per spec
-- `.gitignore`: _*.bat, _*.py eccetto _build_setup, _clean_and_build
+- `.gitignore`: _\*.bat, _\*.py eccetto \_build_setup, \_clean_and_build
 
 ## Regole di Sviluppo
 
 ### Performance
-- __slots__, cache trasformazioni+zoom, compositing a target_size preview, debounce 16/33ms, _cached_canvas_size, oggetti canvas riutilizzabili. NEAREST preview+drag (fast_mode), LANCZOS export. Export in thread. Downscale working copy al caricamento (max 2x output), reload originale per export.
+
+- **slots**, cache trasformazioni+zoom, compositing a target_size preview, debounce 16/33ms, \_cached_canvas_size, oggetti canvas riutilizzabili. NEAREST preview+drag (fast_mode), LANCZOS export. Export in thread. Downscale working copy al caricamento (max 2x output), reload originale per export.
 
 ### Stabilita
-- Eccezioni nei callback, cv2.VideoCapture in finally, validare percorsi, logger (no print), division-by-zero (max(1,...) su output_w/h/fps), GIF max 3000 frame. WM_DELETE_WINDOW cleanup. Export cancellabile (_export_cancelled Event). Validazione D&D: dimensione file, UnidentifiedImageError.
+
+- Eccezioni nei callback, cv2.VideoCapture in finally, validare percorsi, logger (no print), division-by-zero (max(1,...) su output_w/h/fps), GIF max 3000 frame. WM_DELETE_WINDOW cleanup. Export cancellabile (\_export_cancelled Event). Validazione D&D: dimensione file, UnidentifiedImageError.
 
 ### GUI/UX
+
 - Tema blu notte (#0a1929), Segoe UI, emoji, sezioni colorate.
 
 ### Drag & Drop (CRITICO per build portable)
+
 - windnd (hook Python sulla finestra root) - funziona con --onefile perche' e' Python puro (no DLL native)
 - MAI subclassing Win32 WNDPROC (SetWindowLongPtrW): crasha Tkinter immediatamente
 - Fallback: tkinterdnd2 se windnd non disponibile
@@ -70,20 +80,24 @@ Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita i
 - Hidden imports: windnd, windnd.windnd, ctypes, ctypes.wintypes
 
 ### Build portable funzionante
+
 - `python -m PyInstaller` (non pyinstaller diretto)
 - Spec: collect_all('windnd'), hidden imports PIL/cv2/numpy/windnd
 - Portable (onefile): Live_Video_Composer_Portable.spec -> dist/Live_Video_Composer_Portable.exe
 - D&D funziona nella portable grazie a windnd Python puro. Vedi build.mdc per dettagli.
 
 ### Logging / Thread / File
+
 - Log: %LOCALAPPDATA%\LiveVideoComposer\live_video_composer.log. Mai file nella cartella exe (utente confuso)
 - output/, exports/ in .gitignore (export utente)
 - Snapshot variabili prima del thread. root.after(0, callback) per aggiornare GUI. gc.collect per GIF, cap.release per video.
 
 ### Git
+
 - Commit e push: `git add -A && git commit -m "messaggio" && git push` (vedi git-autonomy.mdc)
 
 ## Anti-Pattern da Evitare
+
 - NO print() per debug -> usa logger
 - NO subclassing Win32 WNDPROC con Tkinter (SetWindowLongPtrW -> crash!)
 - NO operazioni PIL nel main thread durante export

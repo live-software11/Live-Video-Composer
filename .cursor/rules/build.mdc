@@ -11,31 +11,39 @@ alwaysApply: false
 IMPORTANTE: usare sempre `python -m PyInstaller` (non `pyinstaller` diretto, che potrebbe non essere nel PATH su installazioni utente).
 
 ### Build rapida (doppio click)
+
 `_clean_and_build.bat`: all'avvio esegue `cd /d "%~dp0"` (cwd sempre la root del repo: evita fallimenti con collegamenti, prompt in altra cartella o "Esegui come amministratore" → System32). Poi pulisce `dist`/`build` (errore se file bloccati), installa dipendenze con `python -m pip`, builda installer (onedir), portable (onefile), setup Inno (se ISCC nel PATH). Output in `release/`.
 `_build_setup.bat`: solo generazione setup. PREREQUISITO: eseguire prima build installer (dist/Live_Video_Composer/ deve esistere).
 
 ### Versione Installer (per Inno Setup)
+
 ```bash
 python -m PyInstaller Live_Video_Composer.spec --noconfirm --clean
 ```
+
 Output: `dist/Live_Video_Composer/Live_Video_Composer.exe` (cartella con tutte le DLL)
 
 ### Versione Portable (singolo .exe)
+
 ```bash
 python -m PyInstaller Live_Video_Composer_Portable.spec --noconfirm --clean
 ```
+
 Output: `dist/Live_Video_Composer_Portable.exe` (singolo file eseguibile)
 
 ### Installer Windows
+
 Compilare `installer.iss` con Inno Setup Compiler (Ctrl+F9) dopo la build della versione installer.
 Output: `release/Live_Video_Composer_Setup.exe`
 
 ### Grafiche wizard (stile broadcast)
+
 `_clean_and_build.bat` genera `installer-wizard.bmp` e `installer-wizard-small.bmp` se mancanti (`python scripts/create-installer-wizard.py`). Vedi installer-modern.mdc.
 
 ## Regole CRITICHE
 
 ### Drag & Drop (portable funzionante)
+
 - windnd (hook Python) - funziona con --onefile perche' Python puro (no DLL native)
 - MAI subclassing WNDPROC Win32: crasha Tkinter
 - collect_all('windnd') OBBLIGATORIO in entrambi i spec
@@ -43,6 +51,7 @@ Output: `release/Live_Video_Composer_Setup.exe`
 - Hidden imports: windnd, windnd.windnd, ctypes, ctypes.wintypes
 
 ### Spec Files
+
 - icon.ico in root (obbligatorio)
 - Hidden imports: PIL, PIL.Image, PIL.ImageTk, cv2, numpy, windnd, windnd.windnd, ctypes, ctypes.wintypes
 - cv2: opencv-python-headless espone cv2 (stessa API di opencv-python)
@@ -51,24 +60,29 @@ Output: `release/Live_Video_Composer_Setup.exe`
 - Optimize: 2, UPX: True, Console: False
 
 ### Setup per altro PC
+
 Il file `release/Live_Video_Composer_Setup.exe` e' un installer Windows completo e autonomo:
+
 - Copia il file sul nuovo PC (chiavetta, cloud, rete)
 - Esegui con doppio click
 - Segui la procedura guidata: nessun Python o dipendenza da installare
 - Crea menu Start, disinstallazione, icona desktop (opzionale)
 
 ### Differenze tra versioni
-| Aspetto | Setup (installer) | Portable |
-|---------|-------------------|----------|
-| File | Live_Video_Composer_Setup.exe | Live_Video_Composer_Portable.exe |
-| Uso su altro PC | Copia setup, esegui, installa | Copia exe, esegui (nessuna installazione) |
-| Menu Start | Si | No |
-| Disinstallazione | Si (Pannello di controllo) | No (elimina la cartella) |
-| Drag & Drop | windnd | windnd |
-| Velocita avvio | Immediata | ~3-5 secondi (estrazione temp) |
+
+| Aspetto          | Setup (installer)             | Portable                                  |
+| ---------------- | ----------------------------- | ----------------------------------------- |
+| File             | Live_Video_Composer_Setup.exe | Live_Video_Composer_Portable.exe          |
+| Uso su altro PC  | Copia setup, esegui, installa | Copia exe, esegui (nessuna installazione) |
+| Menu Start       | Si                            | No                                        |
+| Disinstallazione | Si (Pannello di controllo)    | No (elimina la cartella)                  |
+| Drag & Drop      | windnd                        | windnd                                    |
+| Velocita avvio   | Immediata                     | ~3-5 secondi (estrazione temp)            |
 
 ### Test Post-Build
+
 Dopo ogni build, verificare:
+
 1. L'applicazione si avvia senza errori
 2. Il drag & drop di immagini funziona
 3. Il drag & drop di video funziona (se OpenCV incluso)
@@ -78,6 +92,7 @@ Dopo ogni build, verificare:
 7. Nessun file extra viene creato nella cartella dell'exe
 
 ### Versioning
+
 - Versione corrente: 1.4.1
 - Aggiornare in `installer.iss` (#define MyAppVersion)
 - Formato: MAJOR.MINOR.PATCH (semver)

@@ -52,6 +52,9 @@ build/
 dist/
 release/
 
+# Icona generata da scripts/create-icon.py (rigenerare se assente prima della build)
+icon.ico
+
 # Script di build temporanei (eccetto quelli utili)
 _*.bat
 _*.py

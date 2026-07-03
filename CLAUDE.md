@@ -1,7 +1,7 @@
 # CLAUDE.md — Live Video Composer
 
 > **Sintesi viva** per Claude Desktop / Claude Code.
-> **Versione:** 1.0 — 6 maggio 2026 (audit completo: ARCHITETTURA 1.5.0, T-04 HMAC, audit pre-vendita chiuso).
+> **Versione:** 1.1 — 3 luglio 2026 (ARCHITETTURA 1.5.2: codec ottimizzati per vMix/Resolume Arena, opacità per-layer, sfondo trasparente).
 > **Entry-point standard 2026:** [`AGENTS.md`](./AGENTS.md). **Architettura completa:** [`docs/ARCHITETTURA_Live_Video_Composer.md`](./docs/ARCHITETTURA_Live_Video_Composer.md).
 
 ---
@@ -61,6 +61,8 @@ Prima di `git push`: `gh auth status` deve mostrare **`live-software11`** attivo
 - **Log rotation** 5MB × 3 backup in `%LOCALAPPDATA%\LiveVideoComposer\` — MAI cartella exe
 - **Validazione D&D**: estensioni in `IMAGE_FORMATS`/`VIDEO_FORMATS`, warning >500MB img / >4GB video
 - **PyInstaller:** sempre `python -m PyInstaller`, mai `pyinstaller` diretto
+- **Codec video (target player vMix/Resolume Arena):** MP4=H.264 (`avc1`, fallback `mp4v`) per distribuzione; AVI=MJPEG (default) per ingest diretto — unico intra-frame genuino ottenibile da `cv2.VideoWriter` in questa pipeline (HAP/DXV/ProRes/DNxHD falliscono silenziosamente, verificato). Bitrate/CRF non regolabile via OpenCV (verificato) — pipeline ffmpeg dedicata resterebbe da valutare separatamente.
+- **Opacità per-layer + sfondo trasparente:** `ImageLayer.opacity`, `bg_transparent` (alpha reale solo PNG/WebP). Per compositing su sfondo trasparente usare SEMPRE l'helper `_paste_layer()` (mai `img.paste(x, box, x)` diretto — eleva al quadrato l'alpha su destinazione non opaca, bug verificato e corretto).
 
 ---
 
@@ -105,7 +107,8 @@ python -m PyInstaller Live_Video_Composer_Portable.spec --noconfirm --clean  # p
 
 ## 9. Storia recente
 
-- **6 maggio 2026** (questo audit) — `AGENTS.md` + `CLAUDE.md` + `docs/README.md` + ARCHITETTURA 1.5.0.
+- **3 luglio 2026** (questa sessione) — Audit + ottimizzazione per target player reali (vMix, Resolume Arena). Codec: MP4→avc1/fallback mp4v, AVI→MJPEG (default). Nuove feature: opacità per-layer, sfondo trasparente PNG/WebP (con fix di un bug di compositing alpha scoperto in corsa). Bug fix: `duplicate_layer` (path originale + opacity), DPI export reale, preset qualità video reso onesto in UI. Build portable+installer rigenerate e testate. ARCHITETTURA 1.5.2.
+- **6 maggio 2026** — `AGENTS.md` + `CLAUDE.md` + `docs/README.md` + ARCHITETTURA 1.5.0.
 - **24 aprile 2026** — T-04 HMAC client (`ebf5513`): runtime env var.
 - **15 aprile 2026** — TASK BATCH 2026-04-15: runtime guard Python 3.10+, stack bumpato Pillow 12.1.1 / OpenCV 4.13, thread safety export con snapshot, log rotation, costanti centralizzate.
 - **14 aprile 2026** — Sistema licenze integrato + Inno Setup upgrade.

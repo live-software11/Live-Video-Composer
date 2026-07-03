@@ -195,6 +195,8 @@ Live video composer/
 
 ### main.py — Struttura
 
+> Righe approssimative (~3000 totali) — indicative, non aggiornate ad ogni commit. Per la struttura esatta usare la ricerca per nome funzione.
+
 | Sezione                    | Righe     | Contenuto                                                                |
 | -------------------------- | --------- | ------------------------------------------------------------------------ |
 | Imports, logging, costanti | 1-77      | \_get_log_path, logger, IMAGE_FORMATS, VIDEO_FORMATS, RESOLUTION_PRESETS |
@@ -221,6 +223,8 @@ Live video composer/
 | `_do_export_image(filepath)`                                          | Ricarica originali da \_original_path, composita, salva, ripristina.       |
 | `_process_dropped_files(files)`                                       | Valida dimensione/formato, chiama load_image/load_video.                   |
 | `on_closing()`                                                        | WM_DELETE_WINDOW: \_export_cancelled.set(), cleanup layer, root.destroy(). |
+| `_apply_opacity(img, opacity)`                                        | Scala il canale alpha RGBA in base a `ImageLayer.opacity` (0-100%).         |
+| `_paste_layer(out_img, img, x, y, correct_alpha)`                     | Incolla layer RGBA su canvas RGBA; `correct_alpha=True` usa `Image.alpha_composite` (necessario su sfondo trasparente — il paste diretto con maschera=se stesso eleva al quadrato l'alpha, bug verificato). |
 
 ---
 
@@ -231,7 +235,7 @@ Live video composer/
 ```python
 __slots__ = [
     'id', 'original_image', 'name',
-    'offset_x', 'offset_y', 'zoom', 'rotation', 'flip_h', 'flip_v',
+    'offset_x', 'offset_y', 'zoom', 'rotation', 'flip_h', 'flip_v', 'opacity',
     'is_video', 'video_path', 'video_fps', 'video_frames',
     'bounds_in_canvas',
     '_cache', '_cache_key',           # Cache rotation+flip
@@ -240,10 +244,12 @@ __slots__ = [
 ]
 ```
 
+`opacity: int` (0-100, default 100) — applicato a paste-time (non parte della cache rotation/flip) via `_apply_opacity()`.
+
 ### LiveVideoComposer (stato principale)
 
 - **Layer:** `layers: list[ImageLayer]`, `selected_layer: ImageLayer | None`
-- **Output:** `output_width`, `output_height`, `bg_color_var`
+- **Output:** `output_width`, `output_height`, `bg_color_var`, `bg_transparent: tk.BooleanVar` (alpha reale solo export PNG/WebP)
 - **Preview:** `_cached_canvas_size`, `_canvas_persistent_ids`, `preview_scale`
 - **Debounce:** `_redraw_job`, `_resize_job`
 - **Export:** `_export_cancelled: threading.Event`, `progress`, `cancel_btn`
@@ -389,6 +395,20 @@ Dettaglio storico in `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.m
 ---
 
 ## 14. CHANGELOG
+
+### v1.5.2 — opacità per-layer + sfondo trasparente (2026-07-03)
+
+- **Opacità per-layer**: nuovo campo `ImageLayer.opacity` (0-100%), slider dedicato nel pannello Trasformazioni, applicato in preview, export immagine ed export video.
+- **Sfondo trasparente** (`bg_transparent`): canale alpha vero preservato in export PNG/WebP — per overlay/grafiche da usare come Titles in vMix o layer di composizione in Resolume. JPG/BMP/video restano sempre opachi (nessun formato/codec disponibile supporta l'alpha lì).
+- **Bug fix scoperto in corsa**: `Image.paste(img, box, img)` (immagine come propria maschera) eleva impropriamente al quadrato il canale alpha su destinazione non opaca. Nuovo helper `_paste_layer()` con `Image.alpha_composite` per il caso sfondo trasparente; nessuna modifica al path veloce su sfondo opaco.
+
+### v1.5.1 — audit codec/qualità export, target player vMix/Resolume Arena (2026-07-03)
+
+Audit completo (documentazione + codice + test empirici diretti su `cv2.VideoWriter`/Pillow, non solo teoria). Dettaglio in `docs/BugFix_Refactor_Implementazioni_Live_Video_Composer.md`.
+
+- **Bug fix:** `duplicate_layer()` non propagava `_original_path` (export layer duplicati a risoluzione preview invece che piena); DPI export immagine ora scritto realmente nei metadati (prima calcolato ma mai applicato); preset qualità video reso onesto (i numeri kbps/CRF non avevano alcun effetto verificabile su `cv2.VideoWriter` in questo stack — rimossi dalla UI).
+- **Codec video, ri-ottimizzati per vMix/Resolume Arena (non per delivery social):** MP4 → H.264 (`avc1`, fallback `mp4v`); AVI → MJPEG (era XVID) — unico codec intra-frame genuinamente disponibile in questa pipeline OpenCV (HAP/DXV/ProRes/DNxHD falliscono silenziosamente e vengono sostituiti con H.264 dal backend Media Foundation — verificato, falso positivo pericoloso). MJPEG/AVI ora default e raccomandato per ingest diretto in vMix/Resolume (seek/scrub/loop istantanei, nessuno stutter da long-GOP); MP4/H.264 resta per distribuzione/archivio. Nuova label UI esplicativa.
+- **Dipendenze:** Pillow allineato al floor di sicurezza dichiarato (`>=12.1.1,<13`, CVE-2026-25990) nel venv di sviluppo.
 
 ### v1.5.0 — audit memoria a lungo termine (2026-05-06)
 

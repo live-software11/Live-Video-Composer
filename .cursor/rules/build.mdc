@@ -93,6 +93,7 @@ Dopo ogni build, verificare:
 
 ### Versioning
 
-- Versione corrente: 1.4.1
+- Versione corrente: 1.5.2
 - Aggiornare in `installer.iss` (#define MyAppVersion)
 - Formato: MAJOR.MINOR.PATCH (semver)
+- **icon.ico**: artefatto generato (non tracciato in git), rigenerare con `python scripts/create-icon.py` se assente — la build PyInstaller fallisce altrimenti (`FileNotFoundError: Icon input file ... not found`)

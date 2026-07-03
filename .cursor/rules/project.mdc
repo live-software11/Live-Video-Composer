@@ -35,16 +35,17 @@ Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita i
 - Drag & Drop: windnd (hook su finestra root)
 - Build: PyInstaller (onedir per installer, onefile per portable)
 - Installer: Inno Setup
-- Versione: 1.4.1
+- Versione: 1.5.2
+- Target player export video: **vMix, Resolume Arena** (non solo delivery social) — guida le scelte codec
 
 ## Stack Tecnologico
 
-- Python 3.9+ (testato con 3.13)
-- Pillow >=12.1.0
-- opencv-python-headless >=4.10.0 (opzionale, ~50MB in meno di opencv-python)
+- Python 3.10+ (testato con 3.13)
+- Pillow >=12.1.1,<13 (fix sicurezza CVE-2026-25990)
+- opencv-python-headless >=4.13.0.92 (opzionale, ~50MB in meno di opencv-python)
 - numpy >=1.26.0
 - windnd >=1.0.7 (necessario per drag & drop)
-- PyInstaller >=6.0 (build)
+- PyInstaller >=6.11 (build)
 
 ## Struttura
 
@@ -61,6 +62,18 @@ Prima di refactor complesso, elencare: (1) File da modificare (2) Funzionalita i
 ### Performance
 
 - **slots**, cache trasformazioni+zoom, compositing a target_size preview, debounce 16/33ms, \_cached_canvas_size, oggetti canvas riutilizzabili. NEAREST preview+drag (fast_mode), LANCZOS export. Export in thread. Downscale working copy al caricamento (max 2x output), reload originale per export.
+
+### Codec export video (target: vMix, Resolume Arena — verificato empiricamente, non solo da documentazione)
+
+- **MP4** = H.264 (`avc1`, fallback automatico a `mp4v` se il codec non e' disponibile sul sistema) — per distribuzione/archivio, sconsigliato come sorgente diretta Resolume (long-GOP: scrub/loop/reverse causano stutter, documentato: ~3 stream 1080p simultanei vs 6+ con intra-frame)
+- **AVI** = MJPEG (default consigliato) — unico codec intra-frame genuino ottenibile da `cv2.VideoWriter` in questa pipeline OpenCV: HAP/DXV/ProRes/DNxHD **falliscono silenziosamente** e vengono sostituiti con H.264 dal backend Media Foundation di Windows (falso positivo, verificato con test diretti — NON fidarsi di `out.isOpened() == True` per questi fourcc)
+- Bitrate/CRF **non regolabile** via `cv2.VideoWriter` in questo stack: né `VIDEOWRITER_PROP_QUALITY` né `OPENCV_FFMPEG_WRITER_OPTIONS` hanno effetto misurabile (verificato). Non esporre controlli UI che promettono un effetto che non esiste — vero controllo richiederebbe bundlare ffmpeg + subprocess (feature separata, non implementata)
+
+### Opacità per-layer e sfondo trasparente
+
+- `ImageLayer.opacity` (0-100%) applicato via helper `_apply_opacity()` in tutti i path di compositing (preview, export immagine, export video)
+- `bg_transparent`: canale alpha reale preservato **solo** in export PNG/WebP (overlay per vMix Titles / layer Resolume). JPG/BMP/video restano sempre opachi — nessun formato/codec disponibile in questa pipeline supporta l'alpha lì
+- **MAI** usare `out_img.paste(img, box, img)` (immagine come propria maschera) quando la destinazione può essere non opaca: eleva impropriamente al quadrato il canale alpha (bug verificato: layer 50% opacity su sfondo trasparente dava 25% reale). Usare sempre l'helper `_paste_layer()` (usa `Image.alpha_composite` quando serve vera compositing "over").
 
 ### Stabilita
 

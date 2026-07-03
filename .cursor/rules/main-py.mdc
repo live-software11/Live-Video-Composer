@@ -7,21 +7,25 @@ alwaysApply: false
 # Live Video Composer - Regole per main.py
 
 ## Struttura del File
-Il file `main.py` contiene tutto il codice sorgente (~2340 righe):
+Il file `main.py` contiene tutto il codice sorgente (~3000 righe):
 
-1. **Imports, logging, costanti** (righe 1-77)
+1. **Imports, logging, costanti** (inizio file)
    - Logging: %LOCALAPPDATA%\LiveVideoComposer\live_video_composer.log (mai nella cartella exe)
    - cv2 try/except: VIDEO_SUPPORT=True/False. Se False, export video disabilitato
    - IMAGE_FORMATS, VIDEO_FORMATS (set O(1)), RESOLUTION_PRESETS, HANDLE_*
 
-2. **ImageLayer** (classe dati, righe 80-175)
-   - Usa `__slots__` per efficienza memoria
+2. **ImageLayer** (classe dati)
+   - Usa `__slots__` per efficienza memoria — include `opacity` (0-100%, default 100)
    - Cache trasformazioni: (rotation, flip_h, flip_v) + cache zoom (_zoom_cache, _zoom_cache_key)
    - get_transformed_image(zoom=X, fast_mode=False): fast_mode usa NEAREST (drag), cache usa BILINEAR
    - _original_path: path originale per reload ad alta risoluzione durante export
    - Metodo cleanup() per rilascio risorse
 
-3. **LiveVideoComposer** (classe principale GUI, righe 168-2240)
+3. **Helper module-level** (dopo `ImageLayer`, prima di `LiveVideoComposer`)
+   - `_apply_opacity(img, opacity)`: scala il canale alpha di un'immagine RGBA in base all'opacità del layer (no-op se opacity>=100)
+   - `_paste_layer(out_img, img, x, y, correct_alpha)`: incolla un layer RGBA su un canvas RGBA. **OBBLIGATORIO** usare questo invece di `out_img.paste(img, box, img)` diretto quando `out_img` può avere trasparenza (es. `bg_transparent=True`): il paste con l'immagine come propria maschera eleva impropriamente al quadrato il canale alpha su destinazione non opaca (bug verificato). Con `correct_alpha=True` usa `Image.alpha_composite` (vera compositing Porter-Duff "over"); con `False` resta il paste diretto veloce (corretto quando l'alpha finale viene comunque scartato da `.convert('RGB')`).
+
+4. **LiveVideoComposer** (classe principale GUI)
    - `__init__`: variabili stato, setup UI, D&D, _cached_canvas_size, _canvas_persistent_ids, _export_cancelled
    - `setup_style`: tema dark blue con palette definita
    - `create_widgets`: layout 3 colonne (left scrollabile / canvas / right)
@@ -32,7 +36,7 @@ Il file `main.py` contiene tutto il codice sorgente (~2340 righe):
    - Mouse events: drag/resize/rotate con debounce
    - Export: image (thread) + video (thread) con progress
 
-4. **main()** (righe 2212-2225)
+5. **main()** (fine file)
    - Entry point, centramento finestra
 
 ## Pattern da Seguire
@@ -44,12 +48,13 @@ Il file `main.py` contiene tutto il codice sorgente (~2340 righe):
 4. Chiamare redraw_canvas() dopo modifiche visive
 
 ### Aggiungere una nuova trasformazione layer
-1. Aggiungere attributo in ImageLayer.__slots__
-2. Inizializzare in ImageLayer.__init__
-3. Applicare in ImageLayer.get_transformed_image() (aggiornare base_key e zoom_key)
-4. Aggiornare cache_key se influenza il rendering; invalidate_cache() per _zoom_cache
-5. Aggiungere controllo UI nel pannello sinistro
-6. Gestire in _process_video_frame_optimized per export video
+1. Aggiungere attributo in ImageLayer.__slots__ e inizializzarlo in __init__
+2. Se influenza rotation/flip (cache base): applicare in get_transformed_image() e aggiornare base_key/zoom_key + invalidate_cache()
+3. Se e' un parametro "leggero" applicato a paste-time (come `opacity`, non cache-key): applicarlo nei 3 path di compositing — `create_composite_image`, `_create_composite_from_snapshot`, `_process_video_frame_optimized` — SEMPRE nello stesso punto relativo (dopo resize/prima del paste) per coerenza fra preview/export
+4. Propagare in `duplicate_layer()` — bug ricorrente: dimenticarlo qui rompe silenziosamente le copie
+5. Propagare in `_build_export_snapshot()` (entry per-layer nello snapshot, TASK-008 thread-safety)
+6. Aggiungere controllo UI nel pannello sinistro (vedi opacity_scale/opacity_entry come esempio recente)
+7. Se tocca il canale alpha: NON usare `out_img.paste(img, box, img)` diretto — usare `_paste_layer()` (vedi sopra)
 
 ### Ottimizzazioni Performance (non modificare senza motivo)
 - create_composite_image: target_size per preview (evita resize 4K->preview)

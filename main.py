@@ -93,7 +93,7 @@ PREVIEW_SCALE_MARGIN = 0.9          # Margine preview sul canvas
 class ImageLayer:
     """Rappresenta un'immagine nel collage con le sue proprietà"""
     __slots__ = ['id', 'original_image', 'name', 'offset_x', 'offset_y', 'zoom',
-                 'rotation', 'flip_h', 'flip_v', 'is_video', 'video_path',
+                 'rotation', 'flip_h', 'flip_v', 'opacity', 'is_video', 'video_path',
                  'video_fps', 'video_frames', 'bounds_in_canvas', '_cache', '_cache_key',
                  '_zoom_cache', '_zoom_cache_key', '_original_path']
 
@@ -109,6 +109,7 @@ class ImageLayer:
         self.rotation: int = 0  # gradi
         self.flip_h: bool = False  # specchio orizzontale
         self.flip_v: bool = False  # specchio verticale
+        self.opacity: int = 100  # percentuale (0=invisibile, 100=opaco) — overlay vMix/Resolume
 
         # Proprietà video (opzionali)
         self.is_video: bool = False
@@ -200,6 +201,45 @@ class ImageLayer:
         return f"{self.name} ({self.id})"
 
 
+def _apply_opacity(img: Image.Image, opacity: int) -> Image.Image:
+    """Scala il canale alpha di un'immagine RGBA in base all'opacità del layer (0-100).
+    Preserva l'eventuale trasparenza già presente (es. PNG con alpha) moltiplicandola.
+    No-op se opacity>=100 (caso comune, evita lavoro extra per layer opachi).
+    """
+    if opacity >= 100 or img.mode != 'RGBA':
+        return img
+    opacity = max(0, opacity)
+    r, g, b, a = img.split()
+    a = a.point(lambda px: px * opacity // 100)
+    return Image.merge('RGBA', (r, g, b, a))
+
+
+def _paste_layer(out_img: Image.Image, img: Image.Image, x: int, y: int, correct_alpha: bool) -> Image.Image:
+    """Incolla `img` (RGBA) su `out_img` (RGBA) alla posizione (x, y).
+
+    Se `correct_alpha=True` (sfondo trasparente) usa vera compositing Porter-Duff
+    "over" via `Image.alpha_composite`: `out_img.paste(img, box, img)` — usare
+    l'immagine stessa come maschera — eleva impropriamente al quadrato il canale
+    alpha della destinazione quando questa non è opaca (es. layer con opacity 50%
+    su sfondo trasparente: bug verificato, risultato 25% invece di 50%). Su sfondo
+    opaco il paste diretto resta corretto e più veloce (l'alpha finale è comunque
+    scartato dal `.convert('RGB')`), quindi si usa solo quando serve davvero.
+    Restituisce l'immagine risultante (out_img non viene mutato quando correct_alpha=True).
+    """
+    if correct_alpha:
+        layer_canvas = Image.new('RGBA', out_img.size, (0, 0, 0, 0))
+        layer_canvas.paste(img, (x, y))
+        return Image.alpha_composite(out_img, layer_canvas)
+    try:
+        out_img.paste(img, (x, y), img)
+    except ValueError:
+        try:
+            out_img.paste(img, (x, y))
+        except Exception:
+            pass
+    return out_img
+
+
 class LiveVideoComposer:
     def __init__(self, root):
         self.root = root
@@ -258,7 +298,6 @@ class LiveVideoComposer:
 
         # Parametri qualità export (default: Media)
         self.export_dpi = tk.IntVar(value=150)
-        self.export_bit_depth = tk.IntVar(value=16)
         self.quality_preset = tk.StringVar(value="media")
 
         # Flag export cancellabile
@@ -483,6 +522,7 @@ class LiveVideoComposer:
         self.layers_frame.config(text=t("layers.title"))
         self.layer_controls_frame.config(text=t("transform.title"))
         self.zoom_label.config(text=t("transform.scale"))
+        self.opacity_label.config(text=t("transform.opacity"))
         self.rotation_label.config(text=t("transform.rotation"))
         self.pan_label.config(text=t("transform.pan"))
         self.tilt_label.config(text=t("transform.tilt"))
@@ -509,6 +549,8 @@ class LiveVideoComposer:
         self.output_apply_btn.config(text=t("output.apply"))
         self.bg_frame.config(text=t("bg.title"))
         self.bg_custom_btn.config(text=t("bg.custom"))
+        self.bg_transparent_btn.config(text=t("bg.transparent"))
+        self.bg_transparent_hint.config(text=t("bg.transparent_hint"))
         self.image_export_frame.config(text=t("export_img.title") if self.layers else t("export_img.title_disabled"))
         self.export_img_format_label.config(text=t("export_img.format"))
         self.export_img_quality_label.config(text=t("export_img.quality"))
@@ -519,6 +561,7 @@ class LiveVideoComposer:
         has_vid = any(getattr(l, "is_video", False) for l in self.layers)
         self.video_export_frame.config(text=t("export_vid.title") if has_vid else t("export_vid.title_disabled"))
         self.export_vid_format_label.config(text=t("export_vid.format"))
+        self.export_vid_format_hint.config(text=t("export_vid.format_hint"))
         self.export_vid_fps_label.config(text=t("export_vid.fps"))
         self.export_vid_quality_label.config(text=t("export_vid.quality"))
         self.vid_qual_low_rb.config(text=t("export_img.low"))
@@ -636,6 +679,22 @@ class LiveVideoComposer:
         ttk.Button(zoom_btns, text="-", width=3, command=lambda: self.adjust_layer_zoom(-10)).pack(side=tk.LEFT)
         ttk.Button(zoom_btns, text="100%", command=self.reset_layer_zoom).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
         ttk.Button(zoom_btns, text="+", width=3, command=lambda: self.adjust_layer_zoom(10)).pack(side=tk.RIGHT)
+
+        # Opacità (per-layer, utile per overlay in vMix/Resolume)
+        opacity_header = ttk.Frame(self.layer_controls_frame)
+        opacity_header.pack(fill=tk.X, pady=(5,0))
+        self.opacity_label = ttk.Label(opacity_header, text=t("transform.opacity"))
+        self.opacity_label.pack(side=tk.LEFT)
+        self.opacity_entry = ttk.Entry(opacity_header, width=6)
+        self.opacity_entry.pack(side=tk.RIGHT)
+        self.opacity_entry.insert(0, "100")
+        self.opacity_entry.bind('<Return>', self.on_opacity_entry)
+        ttk.Label(opacity_header, text="%").pack(side=tk.RIGHT)
+
+        self.opacity_var = tk.IntVar(value=100)
+        self.opacity_scale = ttk.Scale(self.layer_controls_frame, from_=0, to=100, variable=self.opacity_var,
+                                       orient=tk.HORIZONTAL, command=self.on_opacity_change)
+        self.opacity_scale.pack(fill=tk.X, pady=(0,5))
 
         # Rotazione
         rot_header = ttk.Frame(self.layer_controls_frame)
@@ -849,6 +908,15 @@ class LiveVideoComposer:
         self.bg_custom_btn = ttk.Button(self.bg_frame, text=t("bg.custom"), command=self.choose_custom_color)
         self.bg_custom_btn.pack(pady=(10, 0))
 
+        self.bg_transparent = tk.BooleanVar(value=False)
+        self.bg_transparent_btn = ttk.Checkbutton(self.bg_frame, text=t("bg.transparent"),
+                                                  variable=self.bg_transparent, style="Toggle.TCheckbutton",
+                                                  command=self.on_bg_transparent_toggle)
+        self.bg_transparent_btn.pack(fill=tk.X, pady=(8, 0))
+        self.bg_transparent_hint = ttk.Label(self.bg_frame, text=t("bg.transparent_hint"),
+                                             font=('Segoe UI', 8), foreground=self.border_color, wraplength=230)
+        self.bg_transparent_hint.pack(anchor=tk.W, pady=(2, 0))
+
         # === ESPORTAZIONE IMMAGINE ===
         self.image_export_frame = ttk.LabelFrame(right_frame, text=t("export_img.title"), padding=12)
         self.image_export_frame.pack(fill=tk.X, pady=(0, 8))
@@ -880,9 +948,9 @@ class LiveVideoComposer:
                        value="alta", command=self.on_quality_preset_change)
         self.qual_high_rb.pack(side=tk.LEFT, padx=3)
 
-        # Info qualità (DPI, bit depth)
+        # Info qualità (DPI, compressione)
         self.quality_info_label = ttk.Label(self.image_export_frame,
-                                            text=t("export_img.dpi", 150, 16, 15),
+                                            text=t("export_img.dpi", 150, 15),
                                             font=('Segoe UI', 8))
         self.quality_info_label.pack(anchor=tk.W, pady=(0, 8))
 
@@ -897,12 +965,16 @@ class LiveVideoComposer:
         # Formati video
         self.export_vid_format_label = ttk.Label(self.video_export_frame, text=t("export_vid.format"), font=('Segoe UI', 9))
         self.export_vid_format_label.pack(anchor=tk.W)
-        self.video_format = tk.StringVar(value="mp4")
+        self.video_format = tk.StringVar(value="avi")  # AVI/MJPEG: seek istantaneo per vMix/Resolume
         vid_fmt_frame = ttk.Frame(self.video_export_frame)
         vid_fmt_frame.pack(fill=tk.X, pady=(2, 8))
         for i, fmt in enumerate(["MP4", "AVI", "WebM", "GIF"]):
             ttk.Radiobutton(vid_fmt_frame, text=fmt, variable=self.video_format,
                            value=fmt.lower()).grid(row=0, column=i, sticky=tk.W, padx=2)
+
+        self.export_vid_format_hint = ttk.Label(self.video_export_frame, text=t("export_vid.format_hint"),
+                                                font=('Segoe UI', 8), foreground=self.border_color, wraplength=230)
+        self.export_vid_format_hint.pack(anchor=tk.W, pady=(0, 5))
 
         # FPS
         fps_frame = ttk.Frame(self.video_export_frame)
@@ -930,11 +1002,10 @@ class LiveVideoComposer:
                        value="alta", command=self.on_vid_quality_preset_change)
         self.vid_qual_high_rb.pack(side=tk.LEFT, padx=3)
 
-        # Info qualità video
+        # Info qualità video (il bitrate reale non è regolabile: limite di cv2.VideoWriter, vedi on_vid_quality_preset_change)
         self.vid_quality = tk.IntVar(value=75)
-        self.vid_bitrate = tk.IntVar(value=5000)  # kbps
         self.vid_quality_info_label = ttk.Label(self.video_export_frame,
-                                                text=t("export_vid.bitrate", 5000, 23),
+                                                text=t("export_vid.bitrate"),
                                                 font=('Segoe UI', 8))
         self.vid_quality_info_label.pack(anchor=tk.W, pady=(0, 8))
 
@@ -1147,19 +1218,16 @@ class LiveVideoComposer:
 
         if preset == "bassa":
             self.export_dpi.set(72)
-            self.export_bit_depth.set(8)
             self.img_quality.set(60)
-            self.quality_info_label.config(text=t("export_img.dpi", 72, 8, 40))
+            self.quality_info_label.config(text=t("export_img.dpi", 72, 40))
         elif preset == "media":
             self.export_dpi.set(150)
-            self.export_bit_depth.set(16)
             self.img_quality.set(85)
-            self.quality_info_label.config(text=t("export_img.dpi", 150, 16, 15))
+            self.quality_info_label.config(text=t("export_img.dpi", 150, 15))
         else:  # alta
             self.export_dpi.set(300)
-            self.export_bit_depth.set(24)
             self.img_quality.set(100)
-            self.quality_info_label.config(text=t("export_img.dpi", 300, 24, 0))
+            self.quality_info_label.config(text=t("export_img.dpi", 300, 0))
 
     def on_lock_toggle(self):
         """Aggiorna l'icona del toggle quando cambia stato"""
@@ -1477,6 +1545,9 @@ class LiveVideoComposer:
             self.zoom_var.set(self.selected_layer.zoom)
             self.zoom_entry.delete(0, tk.END)
             self.zoom_entry.insert(0, str(self.selected_layer.zoom))
+            self.opacity_var.set(self.selected_layer.opacity)
+            self.opacity_entry.delete(0, tk.END)
+            self.opacity_entry.insert(0, str(self.selected_layer.opacity))
             self.rotation_var.set(self.selected_layer.rotation)
             self.rotation_entry.delete(0, tk.END)
             self.rotation_entry.insert(0, str(self.selected_layer.rotation))
@@ -1541,6 +1612,11 @@ class LiveVideoComposer:
             new_layer.offset_y = self.selected_layer.offset_y + 50
             new_layer.flip_h = self.selected_layer.flip_h
             new_layer.flip_v = self.selected_layer.flip_v
+            new_layer.opacity = self.selected_layer.opacity
+            # Propaga il path dell'originale ad alta risoluzione (se il layer sorgente
+            # usa una working copy ridotta): senza questo l'export della copia
+            # userebbe la risoluzione di preview invece di quella piena.
+            new_layer._original_path = self.selected_layer._original_path
 
             self.layers.append(new_layer)
             self.selected_layer = new_layer
@@ -1678,6 +1754,26 @@ class LiveVideoComposer:
             self.zoom_entry.delete(0, tk.END)
             self.zoom_entry.insert(0, str(new_zoom))
             self.redraw_canvas()
+
+    def on_opacity_change(self, event=None):
+        if self.selected_layer:
+            self.selected_layer.opacity = int(self.opacity_var.get())
+            self.opacity_entry.delete(0, tk.END)
+            self.opacity_entry.insert(0, str(self.selected_layer.opacity))
+            self.redraw_canvas()
+
+    def on_opacity_entry(self, event=None):
+        if self.selected_layer:
+            try:
+                value = int(self.opacity_entry.get())
+                value = max(0, min(100, value))
+                self.selected_layer.opacity = value
+                self.opacity_var.set(value)
+                self.opacity_entry.delete(0, tk.END)
+                self.opacity_entry.insert(0, str(value))
+                self.redraw_canvas()
+            except ValueError:
+                pass
             self.update_size_display()
 
     def reset_layer_zoom(self):
@@ -1794,17 +1890,21 @@ class LiveVideoComposer:
         output_w = max(1, output_w)
         output_h = max(1, output_h)
 
+        # Sfondo trasparente (canale alpha vero, per overlay PNG/WebP in vMix/Resolume)
+        transparent_bg = self.bg_transparent.get() if hasattr(self, 'bg_transparent') else False
+        bg_fill = (0, 0, 0, 0) if transparent_bg else self.bg_color_var.get()
+
         # Per la preview: crea direttamente a target_size evitando resize enorme
         if target_size:
             target_w, target_h = target_size
             target_w = max(1, target_w)
             target_h = max(1, target_h)
             scale = min(target_w / max(1, output_w), target_h / max(1, output_h))
-            out_img = Image.new('RGBA', (target_w, target_h), color=self.bg_color_var.get())
+            out_img = Image.new('RGBA', (target_w, target_h), color=bg_fill)
             resample = Image.Resampling.NEAREST  # Veloce per preview
         else:
             scale = 1.0
-            out_img = Image.new('RGBA', (output_w, output_h), color=self.bg_color_var.get())
+            out_img = Image.new('RGBA', (output_w, output_h), color=bg_fill)
             resample = Image.Resampling.LANCZOS if for_export else Image.Resampling.BILINEAR
 
         # Disegna ogni layer dal basso verso l'alto
@@ -1819,6 +1919,7 @@ class LiveVideoComposer:
                     new_w = max(1, int(img.size[0] * scale))
                     new_h = max(1, int(img.size[1] * scale))
                     img = img.resize((new_w, new_h), resample)
+                    img = _apply_opacity(img, layer.opacity)
                     x = (target_w - new_w) // 2 + int(layer.offset_x * scale)
                     y = (target_h - new_h) // 2 + int(layer.offset_y * scale)
                 else:
@@ -1830,21 +1931,16 @@ class LiveVideoComposer:
                     new_w = max(1, int(img.size[0] * zoom_pct))
                     new_h = max(1, int(img.size[1] * zoom_pct))
                     img = img.resize((new_w, new_h), resample)
+                    img = _apply_opacity(img, layer.opacity)
                     x = (output_w - new_w) // 2 + layer.offset_x
                     y = (output_h - new_h) // 2 + layer.offset_y
 
-                try:
-                    out_img.paste(img, (x, y), img)
-                except ValueError:
-                    try:
-                        out_img.paste(img, (x, y))
-                    except Exception:
-                        pass
+                out_img = _paste_layer(out_img, img, x, y, transparent_bg)
             except Exception as e:
                 logger.warning(f"Errore rendering layer {layer.name}: {e}")
                 continue
 
-        return out_img.convert('RGB')
+        return out_img if transparent_bg else out_img.convert('RGB')
 
     def _create_composite_from_snapshot(self, snapshot):
         """Crea l'immagine composita usando esclusivamente lo snapshot export (TASK-008).
@@ -1855,7 +1951,9 @@ class LiveVideoComposer:
         """
         output_w = max(1, snapshot['output_w'])
         output_h = max(1, snapshot['output_h'])
-        out_img = Image.new('RGBA', (output_w, output_h), color=snapshot['bg_color'])
+        transparent_bg = snapshot.get('bg_transparent', False)
+        bg_fill = (0, 0, 0, 0) if transparent_bg else snapshot['bg_color']
+        out_img = Image.new('RGBA', (output_w, output_h), color=bg_fill)
         resample = Image.Resampling.LANCZOS
 
         for entry in snapshot['layers']:
@@ -1876,20 +1974,15 @@ class LiveVideoComposer:
                 new_w = max(1, int(img.size[0] * zoom_pct))
                 new_h = max(1, int(img.size[1] * zoom_pct))
                 img = img.resize((new_w, new_h), resample)
+                img = _apply_opacity(img, entry.get('opacity', 100))
                 x = (output_w - new_w) // 2 + entry['offset_x']
                 y = (output_h - new_h) // 2 + entry['offset_y']
-                try:
-                    out_img.paste(img, (x, y), img)
-                except ValueError:
-                    try:
-                        out_img.paste(img, (x, y))
-                    except Exception:
-                        pass
+                out_img = _paste_layer(out_img, img, x, y, transparent_bg)
             except Exception as e:
                 logger.warning(f"Errore rendering snapshot layer {entry.get('name')}: {e}")
                 continue
 
-        return out_img.convert('RGB')
+        return out_img if transparent_bg else out_img.convert('RGB')
 
     def _schedule_redraw(self, delay_ms=DEBOUNCE_NORMAL_MS):
         """Schedula un redraw con debounce (evita accumulo eventi durante drag)"""
@@ -2250,6 +2343,13 @@ class LiveVideoComposer:
         self.bg_color_var.set(color)
         self.redraw_canvas()
 
+    def on_bg_transparent_toggle(self):
+        """Attiva/disattiva sfondo trasparente (canale alpha reale in export PNG/WebP).
+        JPG/BMP e l'export video restano sempre opachi (nessun formato/codec disponibile
+        supporta l'alpha in questa pipeline) e ripiegano sul colore sfondo selezionato.
+        """
+        self.redraw_canvas()
+
     def choose_custom_color(self):
         from tkinter import colorchooser
         color = colorchooser.askcolor(title=t("dialog.choose_color"))
@@ -2261,21 +2361,23 @@ class LiveVideoComposer:
         pass  # Info qualità aggiornata tramite preset
 
     def on_vid_quality_preset_change(self, event=None):
-        """Aggiorna i parametri video in base al preset selezionato"""
+        """Aggiorna il preset qualità video.
+
+        NOTA: cv2.VideoWriter non espone un controllo bitrate/CRF affidabile
+        multipiattaforma (verificato: né VIDEOWRITER_PROP_QUALITY né
+        OPENCV_FFMPEG_WRITER_OPTIONS hanno effetto sull'encoder di sistema
+        usato in export). self.vid_quality resta come stato UI/futuro hook
+        per un'eventuale pipeline ffmpeg dedicata; l'etichetta non promette
+        più numeri di bitrate/CRF che non trovano riscontro nel file esportato.
+        """
         preset = self.vid_quality_preset.get()
         if preset == "bassa":
             self.vid_quality.set(50)
-            self.vid_bitrate.set(2000)
-            info_text = t("export_vid.bitrate", 2000, 28)
         elif preset == "media":
             self.vid_quality.set(75)
-            self.vid_bitrate.set(5000)
-            info_text = t("export_vid.bitrate", 5000, 23)
         else:  # alta
             self.vid_quality.set(100)
-            self.vid_bitrate.set(8000)
-            info_text = t("export_vid.bitrate", 8000, 18)
-        self.vid_quality_info_label.config(text=info_text)
+        self.vid_quality_info_label.config(text=t("export_vid.bitrate"))
 
     def set_video_export_enabled(self, enabled):
         """Abilita/disabilita il box esportazione video"""
@@ -2383,7 +2485,9 @@ class LiveVideoComposer:
             'output_w': max(1, self.output_width.get()),
             'output_h': max(1, self.output_height.get()),
             'bg_color': self.bg_color_var.get(),
+            'bg_transparent': self.bg_transparent.get() if hasattr(self, 'bg_transparent') else False,
             'img_quality': self.img_quality.get() if hasattr(self, 'img_quality') else 100,
+            'dpi': self.export_dpi.get() if hasattr(self, 'export_dpi') else 150,
             'fps': max(1, self.fps_var.get()) if hasattr(self, 'fps_var') else 30,
             'layers': [
                 {
@@ -2396,6 +2500,7 @@ class LiveVideoComposer:
                     'rotation': layer.rotation,
                     'flip_h': layer.flip_h,
                     'flip_v': layer.flip_v,
+                    'opacity': layer.opacity,
                     'is_video': layer.is_video,
                     'video_path': layer.video_path,
                     '_original_path': layer._original_path,
@@ -2496,6 +2601,7 @@ class LiveVideoComposer:
             output_w = snapshot['output_w']
             output_h = snapshot['output_h']
             quality = snapshot['img_quality']
+            dpi = snapshot.get('dpi', 150)
 
             logger.info(f"Export immagine: {output_w}x{output_h} -> {filepath}")
 
@@ -2539,14 +2645,25 @@ class LiveVideoComposer:
                 return
 
             ext = Path(filepath).suffix.lower()
+            supports_alpha = ext in ('.png', '.webp')
+            if img.mode == 'RGBA' and not supports_alpha:
+                # JPG/BMP non supportano canale alpha: appiattisci sul colore sfondo
+                # scelto (anche se "trasparente" era attivo) invece di lasciare RGB
+                # indefinito nelle aree trasparenti.
+                flat = Image.new('RGB', img.size, snapshot.get('bg_color', '#000000'))
+                flat.paste(img, (0, 0), img)
+                img = flat
+
             if ext in ['.jpg', '.jpeg']:
-                img.convert('RGB').save(filepath, 'JPEG', quality=quality, optimize=True)
+                img.convert('RGB').save(filepath, 'JPEG', quality=quality, optimize=True, dpi=(dpi, dpi))
             elif ext == '.png':
-                img.save(filepath, 'PNG', optimize=True)
+                img.save(filepath, 'PNG', optimize=True, dpi=(dpi, dpi))
             elif ext == '.webp':
+                # Il plugin WEBP di Pillow non salva metadati DPI: parametro omesso.
+                # WebP supporta alpha nativamente: 'img' resta RGBA se trasparenza attiva.
                 img.save(filepath, 'WEBP', quality=quality)
             else:
-                img.save(filepath)
+                img.save(filepath, dpi=(dpi, dpi))
 
             file_size = Path(filepath).stat().st_size
             logger.info(f"Export completato: {file_size / 1024:.1f} KB")
@@ -2616,6 +2733,7 @@ class LiveVideoComposer:
                 zoom = video_layer.zoom / 100.0
                 offset_x = video_layer.offset_x
                 offset_y = video_layer.offset_y
+                opacity = video_layer.opacity
             else:
                 needs_flip_h = vid_entry['flip_h']
                 needs_flip_v = vid_entry['flip_v']
@@ -2623,13 +2741,28 @@ class LiveVideoComposer:
                 zoom = vid_entry['zoom'] / 100.0
                 offset_x = vid_entry['offset_x']
                 offset_y = vid_entry['offset_y']
+                opacity = vid_entry.get('opacity', 100)
             bg_color = snapshot['bg_color']
 
-            # Codec in base al formato
+            # Codec in base al formato.
+            # MP4 usa H.264 (avc1): buona compressione per distribuzione/archivio,
+            # ma long-GOP (frame B/P dipendenti da keyframe) — sconsigliato come
+            # sorgente diretta in vMix/Resolume: scrub/loop/reverse in tempo reale
+            # richiedono di decodificare dal keyframe piu' vicino a ogni salto,
+            # causando stutter (verificato: Resolume regge ~3 stream 1080p H.264
+            # vs 6+ con codec intra-frame).
+            # AVI usa MJPEG: ogni frame e' indipendente (intra-frame), seek/scrub
+            # istantaneo, decode leggero anche con molti layer simultanei — il
+            # fallback "safe" universalmente raccomandato quando HAP/DXV (i codec
+            # GPU ideali per Resolume) non sono disponibili. Verificato: HAP/DXV/
+            # ProRes/DNxHD NON sono realmente incapsulabili con questa pipeline
+            # OpenCV (falliscono silenziosamente e vengono sostituiti con H.264
+            # dal backend Media Foundation di Windows) — NON usarli senza una
+            # pipeline ffmpeg dedicata.
             if ext == '.mp4':
-                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                fourcc = cv2.VideoWriter_fourcc(*'avc1')
             elif ext == '.avi':
-                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                fourcc = cv2.VideoWriter_fourcc(*'MJPG')
             elif ext == '.webm':
                 fourcc = cv2.VideoWriter_fourcc(*'VP80')
             elif ext == '.gif':
@@ -2649,7 +2782,7 @@ class LiveVideoComposer:
                     processed = self._process_video_frame_optimized(
                         pil_frame, output_w, output_h,
                         needs_flip_h, needs_flip_v, rotation, zoom,
-                        offset_x, offset_y, bg_color
+                        offset_x, offset_y, bg_color, opacity
                     )
 
                     # Quantizza subito per risparmiare memoria (~75% in meno per frame)
@@ -2686,9 +2819,14 @@ class LiveVideoComposer:
                 self.root.after(0, lambda: messagebox.showinfo(t("dialog.success"), t("dialog.gif_saved", filepath, frame_count)))
                 return
             else:
-                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                fourcc = cv2.VideoWriter_fourcc(*'avc1')
 
             out = cv2.VideoWriter(filepath, fourcc, fps, (output_w, output_h))
+            if ext == '.mp4' and not out.isOpened():
+                logger.warning("Codec avc1 (H.264) non disponibile su questo sistema, fallback a mp4v")
+                out.release()
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                out = cv2.VideoWriter(filepath, fourcc, fps, (output_w, output_h))
             if not out.isOpened():
                 raise Exception("Impossibile creare il file video di output")
 
@@ -2771,8 +2909,13 @@ class LiveVideoComposer:
 
     def _process_video_frame_optimized(self, frame, output_w, output_h,
                                         flip_h, flip_v, rotation, zoom,
-                                        offset_x, offset_y, bg_color):
-        """Processa un singolo frame video (versione ottimizzata con parametri pre-calcolati)"""
+                                        offset_x, offset_y, bg_color, opacity=100):
+        """Processa un singolo frame video (versione ottimizzata con parametri pre-calcolati).
+
+        NOTA: lo sfondo resta sempre opaco (RGB) — nessun codec video disponibile in
+        questa pipeline (MJPEG/H.264/XVID/VP8) supporta un canale alpha, a differenza
+        dell'export immagine PNG/WebP.
+        """
         # Crea sfondo
         output = Image.new('RGB', (output_w, output_h), color=bg_color)
 
@@ -2794,6 +2937,7 @@ class LiveVideoComposer:
         new_w = max(1, int(img.size[0] * zoom))
         new_h = max(1, int(img.size[1] * zoom))
         img = img.resize((new_w, new_h), Image.Resampling.BILINEAR)
+        img = _apply_opacity(img, opacity)
 
         # Posizione
         x = (output_w - new_w) // 2 + offset_x
@@ -2810,7 +2954,7 @@ class LiveVideoComposer:
             frame, output_w, output_h,
             video_layer.flip_h, video_layer.flip_v, video_layer.rotation,
             video_layer.zoom / 100.0, video_layer.offset_x, video_layer.offset_y,
-            self.bg_color_var.get()
+            self.bg_color_var.get(), video_layer.opacity
         )
 
 
